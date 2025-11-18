@@ -28,9 +28,9 @@
 const { useState, useEffect, useMemo } = React;
 
 // =================================================================
-//  CONFIGURATION: PASTE YOUR GOOGLE SCRIPT URL HERE
+//  CONFIGURATION
 // =================================================================
-const GOOGLE_SCRIPT_URL = ""; 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuMh45s7zApb3p-eR-Sk_Sxk4QQj7y2sQ5MQCVmsk31QfNjnI5CZdAUHMPAGXZte8g/exec"; 
 
 // ==========================================
 // LOGIC
@@ -70,26 +70,44 @@ const generateAutoMatches = (sItems, uItems) => {
     return newMatches;
 };
 
-// Better CSV Parser to handle quoted descriptions with commas
+// Safely parse CSV preventing "undefined" crashes
 const parseUsFoods = (raw) => {
     return raw.trim().split('\n').map(line => {
-        const regex = /^(\d+),(.*?),(\d+),"(.*?)",(.*?),(.*?),(\$.*?),/;
-        const match = line.match(regex);
-        
-        if (match) {
-            return {
-                id: match[3],
-                desc: match[4],
-                brand: match[5],
-                price: match[7],
-                raw: line
-            };
+        try {
+            // Regex for lines with quotes: 1,Cat,ID,"DESC",Brand,Pack,Price,Unit
+            const regex = /^(\d+),(.*?),(\d+),"(.*?)",(.*?),(.*?),(\$.*?),/;
+            const match = line.match(regex);
+            
+            if (match) {
+                return {
+                    id: match[3],
+                    desc: match[4],
+                    brand: match[5],
+                    price: match[7],
+                    raw: line
+                };
+            }
+            // Fallback for lines without quotes
+            const parts = line.split(',');
+            if (parts.length > 4) {
+                // Safety check: ensure parts exist before accessing
+                const id = parts[2];
+                const rawDesc = parts[3] || ""; 
+                const brand = parts[4];
+                const price = parts.length > 2 ? parts[parts.length-2] : "$0.00";
+                
+                return { 
+                    id: id, 
+                    desc: rawDesc.replace(/"/g, ''), 
+                    brand: brand, 
+                    price: price, 
+                    raw: line 
+                };
+            }
+            return null;
+        } catch (e) {
+            return null; // Skip bad lines instead of crashing
         }
-        const parts = line.split(',');
-        if (parts.length > 4) {
-            return { id: parts[2], desc: parts[3].replace(/"/g, ''), brand: parts[4], price: parts[parts.length-2], raw: line };
-        }
-        return null;
     }).filter(i => i && i.id);
 };
 
