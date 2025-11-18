@@ -1,216 +1,211 @@
-const shamrockItems = [
-"WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE",
-"CHICKEN, BRST DBL B&S W-RIB MEAT",
-"SAUCE, DEMI-GLACE DE VIANDE CLASSIC",
-"PEPPER, BELL CHOPR GLD",
-"PASTA, LASAGNA FLAT SHEET 8.25X10.25 FZN",
-"TOMATO, GRP RED WHL CLAMSHELL REFRIG FRS",
-"BUTTER, SOLID UNSLTD AA",
-"SCRUBBER, SCOURING KITCHEN STNLS",
-"OLIVE, KALAMATA WEDGES",
-"CUCUMBER, WHL SK ON 5LB MINI PK",
-"SYRUP, GINGER ALE BIB",
-"PAN, STEAM TABLE ALUM FOIL HALF SIZE REC",
-"SYRUP, TONIC MIX",
-"CONTAINER, PAPER 32Z WHT W-LID",
-"FOIL, 18\"X500' STND",
-"SYRUP, LEMONADE ORIG BIB",
-"OIL, CANOLA CLR FRY ZTF",
-"SYRUP, VANILLA",
-"SOAP, HND ANTIBAC",
-"TRAY, 16\" PLATTER PLEASERS BLACK",
-"SPICE, NUTMEG GRND",
-"SPICE, PEPPER BLK WHL",
-"NUTS, FILBERT BLANCHED WHL DRY RSTD",
-"CHEESE, RICOTTA SOPRAFFINA FRSH",
-"HERB, PARSLEY W&T",
-"BEEF, GRND 81/19 CHUB REFRIG",
-"FILM, 12\"X2000' CUTTER BOX",
-"CRUST, PIZZA 12\" PRE-BAKED GF VEGAN",
-"PROSCIUTTO, PARMA WHL BNLS AGED 14",
-"HERB, THYME 1LB",
-"BOX, PIZZA 12\" WHT-KRFT 1 7/8\" DP",
-"BLEACH, LIQ 6% GERMICIDAL ULTRA",
-"CRUMBS, BREAD ITAL SEASN",
-"CAKE, CHOC LAVA DIVINE GF",
-"CLEANER, GLASS RTU",
-"LINER, CAN 33GAL 33X41 1.6MIL BLK",
-"PEPPERONI, SLI BULK",
-"LID, STEAM PAN FOIL FULL SIZE",
-"CRUMBS, BREAD JAPANESE PANKO",
-"CUCUMBER, WHL SK ON 24CT REFRIG",
-"KALE, BABY MXD",
-"GUANCIALE, PORK DRY CURED",
-"CARTON, PAPER FOOD #8 KRAFT",
-"CREAM, WHPD AEROSOL 13Z",
-"TOMATO, PLUM WHL PLD IN JCE W-BASIL",
-"[SO] SPICE, CLOVES WHL",
-"OIL, OLV CANOLA XVRGN BLND 90/10",
-"SALT, SEA WHT GRANULE 3LB KOSHER",
-"EGGPLANT, FANCY",
-"MUSSELS, BLK WHL SHELL CKD",
-"POTATO, RUSSET 100CT",
-"WATER, SPARKLING MINERAL 16.9Z PLASTIC B",
-"TOMATO, 4X5 VINE RIPE UP BULK",
-"CLAM, WHL SHELL 17-22 CT",
-"LIME, 52-56EA MINI PK",
-"BRUSSELS SPROUT, GRN HALF CLEANED",
-"JUICE, CLAM",
-"JUICE, ORNG 100% NSA W-VIT C",
-"CHEESE, MOZZ LOG 11.4Z IN BRINE",
-"PORK, SHANK BRAISED SOUS VIDE PCH",
-"PROSCIUTTO, COTTO",
-"SPICE, CINN STICK",
-"CHEESE, BURRATA BALL IN WTR 4Z CUP",
-"VINEGAR, BALSAMIC IMP",
-"RICE, RISOTTO ARBORIO SUPERFINO",
-"CHEESE, PARM GRANA PADANO ITAL",
-"SQUASH, YLW MINI PK",
-"JUICE, LIME FRSH SQZ",
-"LETTUCE, ROMAINE HRT JUMBO",
-"ICE CREAM, STRAWBRY 10.1% HARD PACK",
-"ICE CREAM, SPUMONI 10.1% HARD PACK",
-"DETERGENT, DISHWASHER PINK CONC",
-"SPINACH, TRIPLE CLEANED",
-"HALF & HALF, 32Z BTL REFRIG ESL",
-"ICE CREAM, VANILLA BEAN MADAGASCAR",
-"SPICE, PEPPER RED CRSH BULK",
-"SYRUP, COKE DIET BIB",
-"CHOCOLATE, SHAVING DRK",
-"LID, 16\" PET DOME CLEAR PLATTER",
-"SYRUP, PEACH",
-"SYRUP, SPRITE BIB",
-"MUSHROOM, PORCINI SLI IN HERBS & OIL",
-"BOX, PIZZA 12\" KRFT-KRFT",
-"[OBS] COATING, VEG OIL AEROSOL",
-"CAPER, NONPAREIL 32Z JAR",
-"FLOUR, SEMOLINA PASTA #1 HIGH",
-"PEAR, BARTLETT US #1",
-"TOMATO, SUN DRIED JULIENNE",
-"CHEESE, MOZZ DICED LMPS FZN",
-"ARTICHOKE, HRT QTRD IN WTR IMP",
-"SAUCE, CHILI SRIRACHA",
-"TOWEL, PAPR HARDWOUND RL 1PLY KRFT",
-"RAVIOLI, LOBSTER MAINE SHERRY CRM",
-"CLEANER, DEGREASER HVY DTY",
-"CHEESE, MOZZARELLA BUFFALO FROZEN",
-"POTATO, MASHED RSTD GRLC REDSKIN ON",
-"PASTA, CASARECCE GF",
-"ICE CREAM, FRENCH CHOC",
-"PASTA, LINGUINE RISTORANTE",
-"PASTA, PENNE RIGATE",
-"BAG, BUN PAN LDPE 21X6X35 CLR",
-"PAN, FOIL FULL SIZE",
-"CANDLE, BIRTHDAY RND WAX",
-"OLIVE, GRN STFD MANZANO IMP",
-"WATER, SPARKLING MINERAL 16.9Z",
-"CALAMARI, RING & TENTACLE",
-"[JIT] VEAL, CUTLET 6Z CUBED",
-"JUICE, LEMON FRSH SQZ",
-"CONTAINER, PLS 32Z DELI RND CLR",
-"PASTA, SPAGHETTI",
-"PASTA, FARFALLE RISTORANTE",
-"SANITIZER, STERAMINE TABLET",
-"PASTA, MANICOTTI CHSE 5\" FZN",
-"CARTON, PAPER FOOD #1 KRAFT",
-"CARROT, DICED IQF GRD A",
-"CHEESE, PARM GRTD FRSH IMP",
-"TISSUE, BATH 2PLY 500 SHEET",
-"SUGAR, GRANULATED FINE BEET",
-"SYRUP, COKE CLASSIC BIB",
-"PEPPER, BLK GRND",
-"PROSCIUTTO, ITALIAN WHL BNLS DRY",
-"MUSHROOM, WHT SLI",
-"MUSSEL, BLUE 18-27CT WHL SHL CKD",
-"CARTON, PAPER FOOD #3 KRAFT",
-"SUGAR, PKT IN THE RAW",
-"SCALLOP, 10-20CT ATL PROC IQF",
-"COCOA, PWDR MACUIRA",
-"ONION, RED WHL MED",
-"SHALLOT, WHL UNPLD",
-"CHEESE, PROV LOAF REFRIG",
-"SALMON, SMKD HNY ORIG",
-"HERB, ROSEMARY",
-"ARUGULA, WLD REFRIG FRSH",
-"SYRUP, PIBB XTRA",
-"GLAZE, BALSAMIC VINGR PREM IMP",
-"[OBS] GLAZE, BALSAMIC VINGR ALL NATRL",
-"SQUASH, ZUCCHINI MED",
-"PASTA, GNOCCHI POTATO DUMPLING",
-"GARLIC, CLOVE PLD BAG",
-"CHEESE, GORGONZOLA CRMBL",
-"BROCCOLI, FLORET BITE SZ",
-"GIARDINIERA, HOT PEPR VEG BLND",
-"SALT, KOSHER",
-"HONEY, ALFALFA WILDFLOWER",
-"[JIT] TROUT, FLT RAINBOW",
-"SODA, ITAL ORNG BLOOD ARANCIATA",
-"PASTA, NOODLE PAPPARDELLE DRY",
-"HERB, BASIL",
-"LID, PAN FOIL STEAM HALF SIZE",
-"MEATBALL, ITAL 2Z CKD FZN",
-"CARROT, JUMBO",
-"OIL, OLIVE XVRGN 100% CA BIB",
-"PAD, SCOUR 9X6\" HVY DTY",
-"[JIT] SALMON, ATL CHILEAN FLT SK ON",
-"FILM, PVC 18\"X2000' CLR",
-"BAG, PASTRY 21\" DISPOSABLE",
-"COOKIE, LADY FINGERS",
-"SUGAR, GRAN FINE BEET",
-"LID, PLS 8Z 16Z 32Z DELI RND CLR",
-"CELERY, JMBO",
-"MILK, 2% RF 1GAL",
-"SOUP, ITAL WEDDING RTU",
-"TWINE, BUTCHER 24PLY",
-"SPICE, OREGANO LEAF WHL BULK",
-"JUICE, CRANBRY COCKTL",
-"PORK, GRND FINE 80/20 FZN",
-"ASPARAGUS, WHL STND",
-"PEPPER, RED WHL FIRE RSTD IMP",
-"CANNOLI, CREAM CHOC CHIP",
-"SODA, ITAL ORNG ARANCIATA",
-"SPICE, GRLC GRANULE",
-"LABEL, USE FIRST 2\" TRILINGUAL",
-"NUT, WALNUT HALF & PCE",
-"MAYONNAISE, DLX HVY DTY",
-"SALAMI, TOSCANO CHUB DRY CURED",
-"WATER, SPARKLING MINERAL FLAT CAP",
-"LEMON, CHO",
-"SODA, ITAL LMN LIMONATA",
-"SPREAD, SOUR CHERRY",
-"FILTER, FRYER CONE 10IN",
-"VINEGAR, WINE WHT",
-"RAVIOLI, FOUR CHSE IN EGG",
-"SOUP BASE, VEG LIQ CONC",
-"RAVIOLI, PUMPKIN MASCARPONE",
-"HERB, SAGE",
-"SYRUP, STRAWBRY",
-"JUICE, APPLE REJUV 100%",
-"SPICE, PEPR RED CRSH SSRV PKT",
-"YEAST, SAF-INSTANT RED",
-"SYRUP, FLAVORING CHOC JUG",
-"OIL, TRUFFLE WHITE",
-"MUSTARD, DIJON",
-"APRON, POLY 28X46 HVY WHT",
-"ORANGE, CHOICE 113CT",
-"CONTAINER, 12Z SQUAT FLEX COMBO PK",
-"BEEF, CHK FLAP CHO ANGUS",
-"SAUCE, ALFREDO",
-"BAG, STORAGE GAL RECLOSABLE",
-"FILTER, COF&TEA 12 CUP",
-"SHRIMP, RAW WHT 16-20CT P&D",
-"CHEESE, FETA BULGARIA IMP",
-"EGG, LIQ SCRAMBLE CAGE FREE",
-"FLOUR, PIZZA GLUTEN MALTED",
-"PEPPER, BELL CHOPR RED",
-"BEET, RED BOXED",
-"TOMATO, PASTE 26% GRD A",
-"SYRUP, RASPBRY",
-"CHEESE, MASCARPONE RBST FREE",
-"NUTS, WALNUT HLVS PCS",
-"ONION, YLW WHL JMBO 50LB",
-"TOMATO, PASTE CONC CAN",
-"CARTON, PAPER FOOD #2 KRAFT",
-"[SO] BAG, PLS 12X7X22 WHT T-SHIRT",
-"OIL, OLV XVRGN BIB IMP"
-];
+// ============================
+//  LOAD JSON DATA
+// ============================
+async function loadData() {
+    const shamrock = await fetch('./data/shamrock.json').then(r => r.json());
+    const usfoods = await fetch('./data/usfoods.json').then(r => r.json());
+    return { shamrock, usfoods };
+}
+
+// ============================
+//  STATE
+// ============================
+let shamrockItems = [];
+let usfoodsItems = [];
+let matches = {}; // key = shamrockID → usfoodsID OR null
+
+// ============================
+//  LOAD SAVED PROGRESS
+// ============================
+function loadSavedProgress() {
+    const saved = localStorage.getItem("matcher-progress");
+    if (saved) {
+        matches = JSON.parse(saved);
+    }
+}
+
+// ============================
+//  SAVE PROGRESS
+// ============================
+function saveProgress() {
+    localStorage.setItem("matcher-progress", JSON.stringify(matches));
+    updateStats();
+    renderList();
+}
+
+// ============================
+//  CLEAR SAVED PROGRESS
+// ============================
+function clearProgress() {
+    if (confirm("Clear all saved matches?")) {
+        localStorage.removeItem("matcher-progress");
+        matches = {};
+        renderList();
+        updateStats();
+    }
+}
+
+// ============================
+//  INITIAL AUTO-MATCH LOGIC
+// (simple fuzzy / contains matching)
+// ============================
+function autoMatch() {
+    shamrockItems.forEach(s => {
+        let sdesc = s.description.toLowerCase();
+
+        // already manually matched? skip
+        if (matches[s.id]) return;
+
+        // best possible match (very basic)
+        let best = usfoodsItems.find(u =>
+            u.description.toLowerCase() === sdesc
+        );
+
+        if (!best) {
+            best = usfoodsItems.find(u =>
+                u.description.toLowerCase().includes(sdesc.substring(0, 10))
+            );
+        }
+
+        matches[s.id] = best ? best.id : null;
+    });
+}
+
+// ============================
+//   UPDATE HEADER COUNTS
+// ============================
+function updateStats() {
+    const total = shamrockItems.length;
+    const matched = Object.values(matches).filter(v => v !== null && v !== "").length;
+    const noMatch = Object.values(matches).filter(v => v === null).length;
+    const pending = total - matched - noMatch;
+
+    document.getElementById("stat-shamrock").textContent = total;
+    document.getElementById("stat-matched").textContent = matched;
+    document.getElementById("stat-pending").textContent = pending;
+    document.getElementById("stat-no-match").textContent = noMatch;
+}
+
+// ============================
+//   RENDER LIST
+// ============================
+function renderList(filter = "all") {
+    const container = document.getElementById("item-list");
+    container.innerHTML = "";
+
+    shamrockItems.forEach(item => {
+        const matchId = matches[item.id];
+        const matchObj = usfoodsItems.find(u => u.id == matchId);
+
+        let status =
+            matchId === null ? "no-match" :
+            matchId ? "matched" : "pending";
+
+        if (filter !== "all" && filter !== status) return;
+
+        let div = document.createElement("div");
+        div.className = "item-row";
+
+        div.innerHTML = `
+            <div class="left">${item.description}</div>
+            <div class="right">
+                <select data-id="${item.id}">
+                    <option value="">-- Select --</option>
+                    ${usfoodsItems.map(u =>
+                        `<option value="${u.id}" ${matchId == u.id ? "selected" : ""}>
+                            ${u.description}
+                        </option>`
+                    ).join("")}
+                    <option value="__nomatch__" ${matchId === null ? "selected" : ""}>
+                        ❌ No Match
+                    </option>
+                </select>
+            </div>
+        `;
+
+        container.appendChild(div);
+    });
+
+    // handle select change
+    document.querySelectorAll('select').forEach(sel => {
+        sel.addEventListener("change", event => {
+            const sid = event.target.dataset.id;
+            const val = event.target.value;
+
+            if (val === "__nomatch__") {
+                matches[sid] = null;
+            } else if (val === "") {
+                matches[sid] = "";
+            } else {
+                matches[sid] = parseInt(val);
+            }
+
+            saveProgress();
+        });
+    });
+}
+
+// ============================
+//   EXPORT JSON
+// ============================
+function exportJSON() {
+    const blob = new Blob([JSON.stringify(matches, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "matches.json";
+    a.click();
+}
+
+// ============================
+//   EXPORT CSV
+// ============================
+function exportCSV() {
+    let csv = "ShamrockID,ShamrockDescription,USFoodsID,USFoodsDescription\n";
+
+    shamrockItems.forEach(s => {
+        const usID = matches[s.id];
+        const usDesc = usfoodsItems.find(u => u.id == usID)?.description || "";
+
+        csv += `"${s.id}","${s.description}","${usID || ""}","${usDesc}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "matches.csv";
+    a.click();
+}
+
+// ============================
+//   FILTER BUTTONS
+// ============================
+function setupFilters() {
+    document.getElementById("btn-all").onclick = () => renderList("all");
+    document.getElementById("btn-pending").onclick = () => renderList("pending");
+    document.getElementById("btn-matched").onclick = () => renderList("matched");
+    document.getElementById("btn-nomatch").onclick = () => renderList("no-match");
+}
+
+// ============================
+//   INIT
+// ============================
+async function init() {
+    loadSavedProgress();
+
+    const data = await loadData();
+    shamrockItems = data.shamrock;
+    usfoodsItems = data.usfoods;
+
+    // initial automatch for items not seen before
+    autoMatch();
+
+    updateStats();
+    setupFilters();
+    renderList("all");
+}
+
+init();
