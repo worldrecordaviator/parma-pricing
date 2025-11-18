@@ -1,56 +1,70 @@
+//--------------------------------------------
+//  LOAD NDJSON (one JSON object per line)
+//--------------------------------------------
 async function loadNDJSON(path) {
     const res = await fetch(path);
     const txt = await res.text();
 
-    // Ignore blank lines and parse each line as JSON
     return txt
         .trim()
         .split("\n")
         .map(line => JSON.parse(line));
 }
 
+//--------------------------------------------
+//  GLOBAL STATE
+//--------------------------------------------
 let shamrockItems = [];
-let usfoodsItems = [];
-let matches = {};
-let filterState = "all";
+let usfoodsItems  = [];
+let matches       = {};
+let filterState   = "all";
 
-// Load saved matches from local storage
+//--------------------------------------------
+//  SAVE / LOAD PROGRESS
+//--------------------------------------------
 function loadProgress() {
     const saved = localStorage.getItem("matches");
     if (saved) matches = JSON.parse(saved);
 }
 
-// Save matches to local storage
 function saveProgress() {
     localStorage.setItem("matches", JSON.stringify(matches));
 }
 
-// Load CSV-like JSON (NDJSON)
+//--------------------------------------------
+//  LOAD DATA (FIXED ABSOLUTE PATHS FOR GITHUB PAGES)
+//--------------------------------------------
 async function loadData() {
-    shamrockItems = await loadNDJSON("./data/shamrock.json");
-    usfoodsItems = await loadNDJSON("./data/usfoods.json");
+    shamrockItems = await loadNDJSON("/parma-food-matcher/data/shamrock.json");
+    usfoodsItems  = await loadNDJSON("/parma-food-matcher/data/usfoods.json");
+
     loadProgress();
     updateCounts();
     renderList();
 }
 
-// Fuzzy match simple scoring
+//--------------------------------------------
+//  FUZZY SCORE
+//--------------------------------------------
 function scoreMatch(a, b) {
     a = a.toLowerCase();
     b = b.toLowerCase();
     let score = 0;
 
-    a.split(/[\s,-]+/).forEach(word => {
-        if (b.includes(word)) score++;
+    a.split(/[\s,-]+/).forEach(w => {
+        if (b.includes(w)) score++;
     });
 
     return score;
 }
 
-function findBestMatches(shamrockDesc) {
+//--------------------------------------------
+//  FIND BEST MATCHES
+//--------------------------------------------
+function findBestMatches(desc) {
     let scored = usfoodsItems.map(u => ({
         item: u,
-        score: scoreMatch(shamrockDesc, u.description)
+        score: scoreMatch(desc, u.description)
     }));
 
     scored = scored.filter(s => s.score > 0);
@@ -59,107 +73,129 @@ function findBestMatches(shamrockDesc) {
     return scored.slice(0, 5);
 }
 
+//--------------------------------------------
+//  UPDATE COUNTS (header boxes)
+//--------------------------------------------
 function updateCounts() {
-    const matched = Object.keys(matches).length;
-    const total = shamrockItems.length;
-    const noMatch = shamrockItems.filter(i => matches[i.id] === null).length;
+    const total   = shamrockItems.length;
+    const matched = Object.keys(matches).filter(id => matches[id] && matches[id] !== null).length;
+    const noMatch = Object.keys(matches).filter(id => matches[id] === null).length;
     const pending = total - matched - noMatch;
 
     document.getElementById("count-shamrock").innerText = total;
-    document.getElementById("count-matched").innerText = matched;
+    document.getElementById("count-matched").innerText  = matched;
     document.getElementById("count-no-match").innerText = noMatch;
-    document.getElementById("count-pending").innerText = pending;
+    document.getElementById("count-pending").innerText  = pending;
 }
 
+//--------------------------------------------
+//  RENDER LIST
+//--------------------------------------------
 function renderList() {
     const list = document.getElementById("list");
     list.innerHTML = "";
 
     shamrockItems.forEach(item => {
-        let status = matches[item.id];
-        if (filterState === "matched" && !status) return;
-        if (filterState === "pending" && status !== undefined) return;
-        if (filterState === "nomatch" && status !== null) return;
+        const sid = item.id;
+        const current = matches[sid];
 
-        const div = document.createElement("div");
-        div.className = "item";
+        if (filterState === "matched" && !current) return;
+        if (filterState === "pending" && current !== undefined) return;
+        if (filterState === "nomatch" && current !== null) return;
+
+        const row = document.createElement("div");
+        row.className = "item-row";
 
         let html = `<div class="left"><strong>${item.description}</strong></div>`;
         html += `<div class="right">`;
 
-        if (status === undefined) {
-            // Pending → show match candidates
+        if (current === undefined) {
             const best = findBestMatches(item.description);
+
             if (best.length === 0) {
-                html += `<button onclick="markNoMatch(${item.id})">No Match</button>`;
+                html += `<button onclick="markNoMatch(${sid})" class="nomatch">No Match</button>`;
             } else {
-                html += best
-                    .map(
-                        b =>
-                            `<button onclick="selectMatch(${item.id}, ${b.item.id})">${b.item.description}</button>`
-                    )
-                    .join("");
-                html += `<button onclick="markNoMatch(${item.id})" class="nomatch">No Match</button>`;
+                html += best.map(b =>
+                    `<button onclick="selectMatch(${sid}, ${b.item.id})">${b.item.description}</button>`
+                ).join("");
+
+                html += `<button onclick="markNoMatch(${sid})" class="nomatch">No Match</button>`;
             }
-        } else if (status === null) {
+        } else if (current === null) {
             html += `<span class="tag nomatch">No Match</span>`;
         } else {
-            const u = usfoodsItems.find(x => x.id === status);
+            const u = usfoodsItems.find(x => x.id === current);
             html += `<span class="tag matched">${u.description}</span>`;
         }
 
         html += `</div>`;
-        div.innerHTML = html;
-        list.appendChild(div);
+        row.innerHTML = html;
+        list.appendChild(row);
     });
 }
 
-function selectMatch(shamrockId, usfoodsId) {
-    matches[shamrockId] = usfoodsId;
+//--------------------------------------------
+//  ACTIONS
+//--------------------------------------------
+function selectMatch(sid, uid) {
+    matches[sid] = uid;
     saveProgress();
     updateCounts();
     renderList();
 }
 
-function markNoMatch(id) {
-    matches[id] = null;
+function markNoMatch(sid) {
+    matches[sid] = null;
     saveProgress();
     updateCounts();
     renderList();
 }
 
 function clearSavedProgress() {
-    if (confirm("Clear all saved matches?")) {
-        localStorage.removeItem("matches");
+    if (confirm("Clear ALL saved matches?")) {
         matches = {};
+        localStorage.removeItem("matches");
         updateCounts();
         renderList();
     }
 }
 
+//--------------------------------------------
+//  FILTER
+//--------------------------------------------
 function setFilter(f) {
     filterState = f;
     renderList();
 }
 
+//--------------------------------------------
+//  EXPORT JSON
+//--------------------------------------------
 function exportJSON() {
-    const data = JSON.stringify(matches, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob(
+        [JSON.stringify(matches, null, 2)],
+        { type: "application/json" }
+    );
 
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
+
     a.href = url;
     a.download = "matches.json";
     a.click();
 }
 
+//--------------------------------------------
+//  EXPORT CSV
+//--------------------------------------------
 function exportCSV() {
-    const rows = [["shamrock_id", "usfoods_id"]];
-    Object.keys(matches).forEach(id => {
-        rows.push([id, matches[id]]);
+    let rows = [["shamrock_id", "usfoods_id"]];
+
+    shamrockItems.forEach(item => {
+        rows.push([item.id, matches[item.id] ?? ""]);
     });
 
-    const csv = rows.map(r => r.join(",")).join("\n");
+    let csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
 
@@ -169,10 +205,14 @@ function exportCSV() {
     a.click();
 }
 
+//--------------------------------------------
+//  IMPORT JSON
+//--------------------------------------------
 function importJSONFile() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json";
+
     input.onchange = e => {
         const file = e.target.files[0];
         const reader = new FileReader();
@@ -184,7 +224,11 @@ function importJSONFile() {
         };
         reader.readAsText(file);
     };
+
     input.click();
 }
 
+//--------------------------------------------
+//  INIT
+//--------------------------------------------
 document.addEventListener("DOMContentLoaded", loadData);
