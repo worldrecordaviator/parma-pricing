@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vendor Match Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Fuse.js for fuzzy search -->
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Shamrock ↔ US Foods Matcher</h1>
+    <p>Confirm and adjust matches, autosaved in this browser.</p>
+  </header>
+
+  <main>
+    <section class="toolbar">
+      <div class="toolbar-left">
+        <div class="stat">
+          <span id="stat-total-shamrock">0</span>
+          <label>Shamrock items</label>
+        </div>
+        <div class="stat">
+          <span id="stat-matched">0</span>
+          <label>Matched</label>
+        </div>
+        <div class="stat">
+          <span id="stat-pending">0</span>
+          <label>Pending</label>
+        </div>
+        <div class="stat">
+          <span id="stat-no-match">0</span>
+          <label>No match</label>
+        </div>
+      </div>
+
+      <div class="toolbar-right">
+        <button id="filter-all" class="btn btn-secondary btn-small active">All</button>
+        <button id="filter-pending" class="btn btn-secondary btn-small">Pending</button>
+        <button id="filter-matched" class="btn btn-secondary btn-small">Matched</button>
+        <button id="filter-no-match" class="btn btn-secondary btn-small">No Match</button>
+      </div>
+    </section>
+
+    <section class="progress-section">
+      <div class="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <span id="progress-label"></span>
+    </section>
+
+    <section class="actions">
+      <div class="actions-left">
+        <button id="btn-export-csv" class="btn">Export CSV</button>
+        <button id="btn-export-json" class="btn">Export JSON</button>
+      </div>
+      <div class="actions-right">
+        <label class="file-input-label">
+          Import JSON
+          <input type="file" id="import-json-input" accept="application/json" />
+        </label>
+        <button id="btn-clear-state" class="btn btn-danger btn-small">
+          Clear Saved Progress
+        </button>
+      </div>
+    </section>
+
+    <section id="list-container" class="list-container">
+      <!-- Rows injected by app.js -->
+    </section>
+  </main>
+
+  <!-- Simple modal for choosing a US Foods match -->
+  <div id="match-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select US Foods Item</h2>
+        <button id="modal-close" class="btn btn-icon">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-shamrock">
+          <h3>Shamrock item</h3>
+          <p id="modal-shamrock-text"></p>
+        </div>
+
+        <div class="modal-search">
+          <input
+            type="text"
+            id="modal-search-input"
+            placeholder="Type to search US Foods items…"
+          />
+        </div>
+
+        <div id="modal-results" class="modal-results">
+          <!-- Results injected here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-no-match" class="btn btn-secondary btn-small">
+          No suitable match
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
