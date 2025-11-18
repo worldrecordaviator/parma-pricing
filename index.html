@@ -14,7 +14,6 @@
         .card-hover:hover { background-color: #f9fafb; cursor: pointer; }
         .card-selected { background-color: #eff6ff; border-left: 4px solid #3b82f6; }
         .scroll-area { scrollbar-width: thin; overflow-y: auto; height: 100%; }
-        /* Webkit scrollbar styling */
         .scroll-area::-webkit-scrollbar { width: 6px; }
         .scroll-area::-webkit-scrollbar-track { background: transparent; }
         .scroll-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
@@ -27,48 +26,26 @@
 const { useState, useEffect, useMemo, useRef } = React;
 
 // ==========================================
-// DATA PROCESSING (Cleaning & Matching Logic)
+// LOGIC & DATA
 // ==========================================
 
-// Helper to calculate similarity score (Jaccard Index on tokens)
 const calculateScore = (str1, str2) => {
     if (!str1 || !str2) return 0;
-    
-    // Clean strings: remove generic words, brands, and measures
     const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED'];
-    const clean = (s) => s.toUpperCase()
-        .replace(/[^A-Z0-9\s]/g, ' ') // Remove special chars
-        .split(/\s+/)
-        .filter(w => w.length > 2 && !stopWords.includes(w));
-
+    const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
     const set1 = new Set(clean(str1));
     const set2 = new Set(clean(str2));
-    
-    // Special weighting: if "main" words match (first words), boost score
     const arr1 = Array.from(set1);
     const arr2 = Array.from(set2);
     let exactMatches = 0;
-    
-    arr1.forEach(w => {
-        if (set2.has(w)) exactMatches++;
-    });
-
+    arr1.forEach(w => { if (set2.has(w)) exactMatches++; });
     const union = new Set([...arr1, ...arr2]).size;
     let score = union === 0 ? 0 : (exactMatches / union);
-
-    // Bonus for matching the very first word (Category usually)
     if (arr1[0] && arr2[0] && arr1[0] === arr2[0]) score += 0.3;
-    
     return score;
 };
 
-// ==========================================
-// RAW DATA (Embedded for portability)
-// ==========================================
-
-// US Foods Data (Parsed from CSV provided)
-const US_FOODS_RAW = `
-1,Protein,1843127,"HALIBUT, 2-6 LB FILLET BONELESS-SKINLESS RAW REF WILD",PACKER,10 LBA,$33.88,LB
+const US_FOODS_RAW = `1,Protein,1843127,"HALIBUT, 2-6 LB FILLET BONELESS-SKINLESS RAW REF WILD",PACKER,10 LBA,$33.88,LB
 2,,1469366,"TROUT, RED 8-10 OZ RAW REF",PACKER,5 LBA,$11.86,LB
 3,,4193030,"TROUT, RAINBOW 7-9 FILLET BUTTERFLY BONELESS SKIN-ON RAW FROZEN IMPORTED CH",ENTRE RIOS,10 LB,$98.87,CS
 4,,5299565,"SALMON, ATLANTIC 3-4 LB FILLET BONELESS SKIN-ON REF FARMED",PACKER,10-12 LBA,$10.29,LB
@@ -366,12 +343,9 @@ const US_FOODS_RAW = `
 296,,3522208,"CHERRY, AMARENA IN SYRUP CANNED",ROLAND,2 EA,$125.39,CS
 297,,5309026,"GIARDINIERA, HOT PAIL REF",CHIPICO PICKLES,2 GA,$116.27,CS
 298,,3365814,"SYRUP, FOUNTAIN PIBB XTRA BAG-IN-BOX",MR. PIBB,5 GA,$129.40,CS
-299,,2424273,"SYRUP, VANILLA ITALIAN STYLE PLASTIC BOTTLE COFFEE BEVERAGE",MONIN,4/1 LT,$46.78,CS
-`;
+299,,2424273,"SYRUP, VANILLA ITALIAN STYLE PLASTIC BOTTLE COFFEE BEVERAGE",MONIN,4/1 LT,$46.78,CS`;
 
-// Shamrock Data (Parsed from OCR Text provided)
-const SHAMROCK_RAW = `
-1|0036937|WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE|PRPKO|CS
+const SHAMROCK_RAW = `1|0036937|WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE|PRPKO|CS
 2|0001693|CHICKEN, BRST DBL B&S W-RIB MEAT|RCSIG|CS
 3|3622331|SAUCE, DEMI-GLACE DE VIANDE CLASSIC|BONEW|CS
 4|3609201|PEPPER, BELL CHOPR GLD 1 1/9BU|P. L.|CS
@@ -584,8 +558,7 @@ const SHAMROCK_RAW = `
 211|1668291|TOMATO, PASTE CONC CAN SHLF STABLE|HUNT|CS
 212|4695371|CARTON, PAPER FOOD #2 KRAFT|PRPKO|CS
 213|2510551|[SO] BAG, PLS 12X7X22 WHT T-SHIRT|COMND|CS
-214|4615671|OIL, OLV XVRGN BIB IMP|TRIFS|CS
-`;
+214|4615671|OIL, OLV XVRGN BIB IMP|TRIFS|CS`;
 
 const App = () => {
     const [shamrockItems, setShamrockItems] = useState([]);
@@ -601,13 +574,8 @@ const App = () => {
         // Parse US Foods
         const usParsed = US_FOODS_RAW.trim().split('\n').map(line => {
             const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-            // Basic CSV parsing fallback if regex fails on simple lines
             const simpleParts = line.split(','); 
-            
-            // Logic to handle the quoted strings in US Foods data
             let id, desc, pack, brand, unit, price;
-            
-            // Use regex match logic for the lines with quotes
             const matches = line.match(/(\d+),,(\d+),"?(.*?)"?,(.*?),(.*?),(\$.*?),(.*)/);
             const matchesNoGroup = line.match(/(\d+),(.*?),(\d+),"?(.*?)"?,(.*?),(.*?),(\$.*?),(.*)/);
 
@@ -622,7 +590,6 @@ const App = () => {
                 brand = matches[4];
                 price = matches[6];
             } else {
-                // Fallback for simple lines
                  id = simpleParts[2];
                  desc = simpleParts[3];
             }
@@ -630,7 +597,7 @@ const App = () => {
             return { id, desc: desc ? desc.replace(/"/g, '') : "Unknown", brand, price, raw: line };
         }).filter(i => i.id);
 
-        // Parse Shamrock (Pipe delimited from OCR correction)
+        // Parse Shamrock
         const shamParsed = SHAMROCK_RAW.trim().split('\n').map(line => {
             const parts = line.split('|');
             if(parts.length < 3) return null;
@@ -646,17 +613,14 @@ const App = () => {
         setUsFoodsItems(usParsed);
         setShamrockItems(shamParsed);
 
-        // Load progress from local storage
         const savedMatches = localStorage.getItem('parma_matches');
         if (savedMatches) {
             setMatches(JSON.parse(savedMatches));
         } else {
-            // Run Auto Matcher only if no save exists
             runAutoMatch(shamParsed, usParsed);
         }
     }, []);
 
-    // Auto Match Logic
     const runAutoMatch = (sItems, uItems) => {
         const newMatches = {};
         sItems.forEach(sItem => {
@@ -664,7 +628,7 @@ const App = () => {
             let bestMatchId = null;
             uItems.forEach(uItem => {
                 const score = calculateScore(sItem.desc, uItem.desc);
-                if (score > 0.45 && score > bestScore) { // Confidence Threshold
+                if (score > 0.45 && score > bestScore) {
                     bestScore = score;
                     bestMatchId = uItem.id;
                 }
@@ -676,12 +640,10 @@ const App = () => {
         setMatches(prev => ({...prev, ...newMatches}));
     };
 
-    // Save to LocalStorage
     useEffect(() => {
         localStorage.setItem('parma_matches', JSON.stringify(matches));
     }, [matches]);
 
-    // Download State (For sharing)
     const exportState = () => {
         const dataStr = JSON.stringify(matches, null, 2);
         const blob = new Blob([dataStr], { type: "application/json" });
@@ -692,7 +654,6 @@ const App = () => {
         a.click();
     };
 
-    // Import State
     const importState = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -709,14 +670,11 @@ const App = () => {
         reader.readAsText(file);
     };
 
-    // Export CSV
     const exportCSV = () => {
         let csvContent = "data:text/csv;charset=utf-8,Shamrock ID,Shamrock Desc,Shamrock Brand,USFoods ID,USFoods Desc,USFoods Price\n";
-        
         shamrockItems.forEach(sItem => {
             const matchID = matches[sItem.id];
             const uItem = usFoodsItems.find(u => u.id === matchID);
-            
             const row = [
                 sItem.id,
                 `"${sItem.desc}"`,
@@ -727,7 +685,6 @@ const App = () => {
             ].join(",");
             csvContent += row + "\n";
         });
-
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -736,10 +693,9 @@ const App = () => {
         link.click();
     };
 
-    // Handle Selection
     const handleSelectShamrock = (item) => {
         setSelectedItem(item);
-        setSearchTerm(""); // Reset search on new selection
+        setSearchTerm("");
     };
 
     const handleMatch = (shamrockId, usFoodId) => {
@@ -747,7 +703,6 @@ const App = () => {
             ...prev,
             [shamrockId]: usFoodId
         }));
-        // Auto advance to next unmatched?
     };
 
     const handleUnmatch = (shamrockId) => {
@@ -756,22 +711,15 @@ const App = () => {
         setMatches(newMatches);
     };
 
-    // Suggestions Logic
     const suggestions = useMemo(() => {
         if (!selectedItem) return [];
-        
-        // Calculate scores
         const scored = usFoodsItems.map(uItem => ({
             ...uItem,
             score: calculateScore(selectedItem.desc, uItem.desc)
         }));
-
-        // Sort by score descending
         return scored.sort((a, b) => b.score - a.score);
-
     }, [selectedItem, usFoodsItems]);
 
-    // Filtered Suggestions based on Search
     const filteredSuggestions = useMemo(() => {
         if (!searchTerm) return suggestions.slice(0, 20);
         return usFoodsItems.filter(u => 
@@ -780,8 +728,6 @@ const App = () => {
         ).slice(0, 20);
     }, [searchTerm, suggestions, usFoodsItems]);
 
-
-    // Filtered Left List
     const filteredShamrock = shamrockItems.filter(item => {
         const isMatched = !!matches[item.id];
         if (filterMode === 'unmatched') return !isMatched;
@@ -805,13 +751,7 @@ const App = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        style={{display:'none'}} 
-                        onChange={importState} 
-                        accept=".json"
-                    />
+                    <input type="file" ref={fileInputRef} style={{display:'none'}} onChange={importState} accept=".json" />
                     <button onClick={() => fileInputRef.current.click()} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 flex items-center gap-2">
                         <i className="fas fa-folder-open"></i> Load Work
                     </button>
@@ -868,6 +808,34 @@ const App = () => {
                                     <span className="bg-slate-100 px-2 py-1 rounded">#{selectedItem.id}</span>
                                 </div>
                             </div>
+
+                            {/* CURRENT MATCH DISPLAY (New Feature) */}
+                            {matches[selectedItem.id] && (
+                                <div className="p-4 bg-blue-50 border-b border-blue-100">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs font-bold text-blue-600 uppercase">Currently Matched To:</span>
+                                        <button 
+                                            onClick={() => handleUnmatch(selectedItem.id)}
+                                            className="text-xs bg-white text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded shadow-sm flex items-center gap-1"
+                                        >
+                                            <i className="fas fa-times"></i> Unmatch Item
+                                        </button>
+                                    </div>
+                                    <div className="bg-white p-3 rounded border border-blue-200 shadow-sm">
+                                        {(() => {
+                                            const matchId = matches[selectedItem.id];
+                                            const matchedItem = usFoodsItems.find(u => u.id === matchId);
+                                            if (!matchedItem) return <span className="text-red-500">Error: Item not found</span>;
+                                            return (
+                                                <div>
+                                                    <div className="font-bold text-slate-800">{matchedItem.desc}</div>
+                                                    <div className="text-xs text-slate-500 mt-1">{matchedItem.brand} | {matchedItem.price}</div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Search Bar */}
                             <div className="p-2 bg-slate-100 border-b">
