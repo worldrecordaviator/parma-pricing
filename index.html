@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parma Pricing Matcher</title>
+    <title>Parma Product Matcher</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f3f4f6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .card-hover:hover { background-color: #f9fafb; cursor: pointer; }
-        .card-selected { background-color: #eff6ff; border-left: 4px solid #3b82f6; }
+        body { background-color: #f8fafc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
+        .card-hover:hover { background-color: #f1f5f9; cursor: pointer; }
+        .card-selected { background-color: #e0f2fe; border-left: 4px solid #0284c7; }
         .scroll-area { scrollbar-width: thin; overflow-y: auto; height: 100%; }
-        .scroll-area::-webkit-scrollbar { width: 6px; }
+        .scroll-area::-webkit-scrollbar { width: 8px; }
         .scroll-area::-webkit-scrollbar-track { background: transparent; }
-        .scroll-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .scroll-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -25,13 +25,10 @@
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 
-// ==========================================
-// LOGIC & DATA
-// ==========================================
-
+// --- MATCHING ALGORITHM ---
 const calculateScore = (str1, str2) => {
     if (!str1 || !str2) return 0;
-    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED'];
+    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM'];
     const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
     const set1 = new Set(clean(str1));
     const set2 = new Set(clean(str2));
@@ -45,6 +42,7 @@ const calculateScore = (str1, str2) => {
     return score;
 };
 
+// --- DATA ---
 const US_FOODS_RAW = `1,Protein,1843127,"HALIBUT, 2-6 LB FILLET BONELESS-SKINLESS RAW REF WILD",PACKER,10 LBA,$33.88,LB
 2,,1469366,"TROUT, RED 8-10 OZ RAW REF",PACKER,5 LBA,$11.86,LB
 3,,4193030,"TROUT, RAINBOW 7-9 FILLET BUTTERFLY BONELESS SKIN-ON RAW FROZEN IMPORTED CH",ENTRE RIOS,10 LB,$98.87,CS
@@ -563,62 +561,61 @@ const SHAMROCK_RAW = `1|0036937|WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE|PRPKO|C
 const App = () => {
     const [shamrockItems, setShamrockItems] = useState([]);
     const [usFoodsItems, setUsFoodsItems] = useState([]);
-    const [matches, setMatches] = useState({}); // Key: ShamrockID, Value: USFoodID
+    const [matches, setMatches] = useState({}); 
     const [selectedItem, setSelectedItem] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterMode, setFilterMode] = useState("all"); // all, unmatched, matched
-    const fileInputRef = useRef(null);
+    const [filterMode, setFilterMode] = useState("all"); 
+    const [cloudModalOpen, setCloudModalOpen] = useState(false);
+    const [githubToken, setGithubToken] = useState("");
+    const [githubRepo, setGithubRepo] = useState("");
+    const [githubOwner, setGithubOwner] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [lastCloudSave, setLastCloudSave] = useState(null);
 
-    // Load and Parse Data on Mount
+    // --- INIT & PARSE ---
     useEffect(() => {
-        // Parse US Foods
         const usParsed = US_FOODS_RAW.trim().split('\n').map(line => {
             const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
             const simpleParts = line.split(','); 
-            let id, desc, pack, brand, unit, price;
+            let id, desc, brand, price;
             const matches = line.match(/(\d+),,(\d+),"?(.*?)"?,(.*?),(.*?),(\$.*?),(.*)/);
             const matchesNoGroup = line.match(/(\d+),(.*?),(\d+),"?(.*?)"?,(.*?),(.*?),(\$.*?),(.*)/);
-
-            if (matchesNoGroup) {
-                id = matchesNoGroup[3];
-                desc = matchesNoGroup[4];
-                brand = matchesNoGroup[5];
-                price = matchesNoGroup[7];
-            } else if (matches) {
-                id = matches[2];
-                desc = matches[3];
-                brand = matches[4];
-                price = matches[6];
-            } else {
-                 id = simpleParts[2];
-                 desc = simpleParts[3];
-            }
-
+            if (matchesNoGroup) { id = matchesNoGroup[3]; desc = matchesNoGroup[4]; brand = matchesNoGroup[5]; price = matchesNoGroup[7]; } 
+            else if (matches) { id = matches[2]; desc = matches[3]; brand = matches[4]; price = matches[6]; } 
+            else { id = simpleParts[2]; desc = simpleParts[3]; }
             return { id, desc: desc ? desc.replace(/"/g, '') : "Unknown", brand, price, raw: line };
         }).filter(i => i.id);
 
-        // Parse Shamrock
         const shamParsed = SHAMROCK_RAW.trim().split('\n').map(line => {
             const parts = line.split('|');
             if(parts.length < 3) return null;
-            return {
-                line: parts[0],
-                id: parts[1],
-                desc: parts[2],
-                brand: parts[3],
-                unit: parts[4]
-            };
+            return { line: parts[0], id: parts[1], desc: parts[2], brand: parts[3], unit: parts[4] };
         }).filter(i => i !== null);
 
         setUsFoodsItems(usParsed);
         setShamrockItems(shamParsed);
 
+        // Load Settings
+        const savedToken = localStorage.getItem('gh_token');
+        const savedRepo = localStorage.getItem('gh_repo');
+        const savedOwner = localStorage.getItem('gh_owner');
+        if(savedToken) setGithubToken(savedToken);
+        if(savedRepo) setGithubRepo(savedRepo);
+        if(savedOwner) setGithubOwner(savedOwner);
+
+        // Load Local Work or Auto-Match
         const savedMatches = localStorage.getItem('parma_matches');
         if (savedMatches) {
             setMatches(JSON.parse(savedMatches));
         } else {
             runAutoMatch(shamParsed, usParsed);
         }
+
+        // Attempt Auto-Load from Cloud if creds exist
+        if(savedToken && savedRepo && savedOwner) {
+            fetchCloudData(savedToken, savedOwner, savedRepo, false);
+        }
+
     }, []);
 
     const runAutoMatch = (sItems, uItems) => {
@@ -628,104 +625,127 @@ const App = () => {
             let bestMatchId = null;
             uItems.forEach(uItem => {
                 const score = calculateScore(sItem.desc, uItem.desc);
-                if (score > 0.45 && score > bestScore) {
-                    bestScore = score;
-                    bestMatchId = uItem.id;
-                }
+                if (score > 0.45 && score > bestScore) { bestScore = score; bestMatchId = uItem.id; }
             });
-            if (bestMatchId) {
-                newMatches[sItem.id] = bestMatchId;
-            }
+            if (bestMatchId) newMatches[sItem.id] = bestMatchId;
         });
         setMatches(prev => ({...prev, ...newMatches}));
     };
 
-    useEffect(() => {
-        localStorage.setItem('parma_matches', JSON.stringify(matches));
-    }, [matches]);
+    useEffect(() => { localStorage.setItem('parma_matches', JSON.stringify(matches)); }, [matches]);
 
-    const exportState = () => {
-        const dataStr = JSON.stringify(matches, null, 2);
-        const blob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "parma-match-data.json";
-        a.click();
+    // --- CLOUD LOGIC ---
+    const saveSettings = () => {
+        localStorage.setItem('gh_token', githubToken);
+        localStorage.setItem('gh_repo', githubRepo);
+        localStorage.setItem('gh_owner', githubOwner);
+        setCloudModalOpen(false);
+        alert("Settings Saved.");
     };
 
-    const importState = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const imported = JSON.parse(e.target.result);
-                setMatches(imported);
-                alert("Matches loaded successfully!");
-            } catch (err) {
-                alert("Invalid file.");
+    const fetchCloudData = async (token, owner, repo, manual = true) => {
+        if(!token || !owner || !repo) return;
+        if(manual) setIsLoading(true);
+        try {
+            const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/matches.json`, {
+                headers: { Authorization: `token ${token}` }
+            });
+            if(res.status === 404) {
+                console.log("No cloud save found yet.");
+            } else if(res.ok) {
+                const data = await res.json();
+                const content = atob(data.content); // Base64 Decode
+                const json = JSON.parse(content);
+                setMatches(json);
+                setLastCloudSave(new Date());
+                if(manual) alert("Data loaded from Cloud!");
+            } else {
+                console.error("GitHub API Error", res);
             }
-        };
-        reader.readAsText(file);
+        } catch(err) {
+            console.error(err);
+            if(manual) alert("Error fetching from cloud.");
+        }
+        if(manual) setIsLoading(false);
     };
 
+    const pushCloudData = async () => {
+        if(!githubToken || !githubRepo) { setCloudModalOpen(true); return; }
+        setIsLoading(true);
+        try {
+            // 1. Get SHA of existing file (needed for update)
+            let sha = null;
+            const getRes = await fetch(`https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/matches.json`, {
+                headers: { Authorization: `token ${githubToken}` }
+            });
+            if(getRes.ok) {
+                const getData = await getRes.json();
+                sha = getData.sha;
+            }
+
+            // 2. PUT new data
+            const content = btoa(JSON.stringify(matches, null, 2)); // Base64 Encode
+            const putRes = await fetch(`https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/matches.json`, {
+                method: 'PUT',
+                headers: { Authorization: `token ${githubToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: `Update matches - ${new Date().toLocaleString()}`,
+                    content: content,
+                    sha: sha // Omit if creating new, include if updating
+                })
+            });
+
+            if(putRes.ok) {
+                alert("Saved to Cloud Successfully!");
+                setLastCloudSave(new Date());
+            } else {
+                alert("Save Failed. Check permissions.");
+            }
+        } catch(err) {
+            console.error(err);
+            alert("Network Error.");
+        }
+        setIsLoading(false);
+    };
+
+    // --- EXPORT ---
     const exportCSV = () => {
         let csvContent = "data:text/csv;charset=utf-8,Shamrock ID,Shamrock Desc,Shamrock Brand,USFoods ID,USFoods Desc,USFoods Price\n";
         shamrockItems.forEach(sItem => {
             const matchID = matches[sItem.id];
             const uItem = usFoodsItems.find(u => u.id === matchID);
             const row = [
-                sItem.id,
-                `"${sItem.desc}"`,
-                sItem.brand,
+                sItem.id, `"${sItem.desc}"`, sItem.brand,
                 matchID ? matchID : "NO MATCH",
-                uItem ? `"${uItem.desc}"` : "",
-                uItem ? uItem.price : ""
+                uItem ? `"${uItem.desc}"` : "", uItem ? uItem.price : ""
             ].join(",");
             csvContent += row + "\n";
         });
-        const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "parma_pricing_analysis.csv");
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", "parma_pricing.csv");
         document.body.appendChild(link);
         link.click();
     };
 
-    const handleSelectShamrock = (item) => {
-        setSelectedItem(item);
-        setSearchTerm("");
-    };
-
-    const handleMatch = (shamrockId, usFoodId) => {
-        setMatches(prev => ({
-            ...prev,
-            [shamrockId]: usFoodId
-        }));
-    };
-
-    const handleUnmatch = (shamrockId) => {
-        const newMatches = {...matches};
-        delete newMatches[shamrockId];
-        setMatches(newMatches);
+    // --- ACTIONS ---
+    const handleSelect = (item) => { setSelectedItem(item); setSearchTerm(""); };
+    const handleMatch = (sid, uid) => { setMatches(prev => ({...prev, [sid]: uid})); };
+    const handleUnmatch = (sid) => { 
+        const m = {...matches}; 
+        delete m[sid]; 
+        setMatches(m); 
     };
 
     const suggestions = useMemo(() => {
         if (!selectedItem) return [];
-        const scored = usFoodsItems.map(uItem => ({
-            ...uItem,
-            score: calculateScore(selectedItem.desc, uItem.desc)
-        }));
-        return scored.sort((a, b) => b.score - a.score);
+        return usFoodsItems.map(u => ({...u, score: calculateScore(selectedItem.desc, u.desc)}))
+            .sort((a, b) => b.score - a.score);
     }, [selectedItem, usFoodsItems]);
 
     const filteredSuggestions = useMemo(() => {
         if (!searchTerm) return suggestions.slice(0, 20);
-        return usFoodsItems.filter(u => 
-            u.desc.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            u.id.includes(searchTerm)
-        ).slice(0, 20);
+        return usFoodsItems.filter(u => u.desc.toLowerCase().includes(searchTerm.toLowerCase()) || u.id.includes(searchTerm)).slice(0, 20);
     }, [searchTerm, suggestions, usFoodsItems]);
 
     const filteredShamrock = shamrockItems.filter(item => {
@@ -736,189 +756,163 @@ const App = () => {
     });
 
     const matchCount = Object.keys(matches).length;
-    const totalCount = shamrockItems.length;
 
     return (
         <div className="flex flex-col h-screen text-sm text-slate-700">
             {/* HEADER */}
-            <div className="bg-white border-b px-4 py-3 flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600 text-white rounded flex items-center justify-center font-bold text-lg">P</div>
+            <div className="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm z-20">
+                <div className="flex items-center gap-4">
+                    <img src="https://static.spotapps.co/website_images/ab_websites/78930_website/logo.png" className="h-12 object-contain" alt="Parma Logo" />
                     <div>
-                        <h1 className="font-bold text-slate-800 text-lg">Parma Product Matcher</h1>
-                        <p className="text-xs text-slate-500">Progress: {matchCount} / {totalCount} ({Math.round((matchCount/totalCount)*100)}%)</p>
+                        <h1 className="font-bold text-slate-800 text-lg leading-tight">Pricing Matcher</h1>
+                        <p className="text-xs text-slate-500">Progress: {matchCount} / {shamrockItems.length}</p>
                     </div>
                 </div>
-                
-                <div className="flex gap-2">
-                    <input type="file" ref={fileInputRef} style={{display:'none'}} onChange={importState} accept=".json" />
-                    <button onClick={() => fileInputRef.current.click()} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 flex items-center gap-2">
-                        <i className="fas fa-folder-open"></i> Load Work
+                <div className="flex gap-3 items-center">
+                    {lastCloudSave && <span className="text-xs text-green-600 mr-2"><i className="fas fa-check"></i> Synced</span>}
+                    <button onClick={pushCloudData} disabled={isLoading} className="btn-secondary px-3 py-2 rounded flex items-center gap-2">
+                        {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cloud-upload-alt text-blue-500"></i>}
+                        <span>Save to Cloud</span>
                     </button>
-                    <button onClick={exportState} className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 flex items-center gap-2">
-                        <i className="fas fa-save"></i> Save Work
-                    </button>
-                    <button onClick={exportCSV} className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold flex items-center gap-2 shadow-sm">
-                        <i className="fas fa-file-csv"></i> Export CSV
+                    <button onClick={() => setCloudModalOpen(true)} className="text-slate-400 hover:text-slate-600"><i className="fas fa-cog text-lg"></i></button>
+                    <button onClick={exportCSV} className="btn-primary px-4 py-2 rounded font-bold flex items-center gap-2 ml-2">
+                        <i className="fas fa-file-csv"></i> Export
                     </button>
                 </div>
             </div>
 
-            {/* MAIN LAYOUT */}
-            <div className="flex flex-1 overflow-hidden">
+            {/* MAIN */}
+            <div className="flex flex-1 overflow-hidden relative">
                 
-                {/* LEFT COLUMN: Shamrock Items */}
+                {/* LEFT COL */}
                 <div className="w-1/3 border-r bg-white flex flex-col">
-                    <div className="p-3 border-b bg-slate-50 flex gap-2">
-                        <button onClick={() => setFilterMode('all')} className={`px-2 py-1 text-xs rounded ${filterMode === 'all' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-500'}`}>All</button>
-                        <button onClick={() => setFilterMode('unmatched')} className={`px-2 py-1 text-xs rounded ${filterMode === 'unmatched' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-500'}`}>Unmatched</button>
-                        <button onClick={() => setFilterMode('matched')} className={`px-2 py-1 text-xs rounded ${filterMode === 'matched' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-slate-500'}`}>Matched</button>
+                    <div className="p-2 border-b bg-slate-50 flex justify-around text-xs font-bold text-slate-500">
+                        {['all','unmatched','matched'].map(m => (
+                            <button key={m} onClick={() => setFilterMode(m)} className={`px-3 py-1 rounded uppercase ${filterMode===m?'bg-blue-100 text-blue-600':''}`}>{m}</button>
+                        ))}
                     </div>
                     <div className="scroll-area">
-                        {filteredShamrock.map(item => {
-                            const isMatched = !!matches[item.id];
-                            const isSelected = selectedItem?.id === item.id;
-                            return (
-                                <div 
-                                    key={item.id}
-                                    onClick={() => handleSelectShamrock(item)}
-                                    className={`p-3 border-b card-hover flex justify-between items-start gap-2 ${isSelected ? 'card-selected' : ''}`}
-                                >
-                                    <div className="flex-1">
-                                        <div className="font-medium">{item.desc}</div>
-                                        <div className="text-xs text-slate-400 mt-1">{item.brand} • {item.id}</div>
-                                    </div>
-                                    {isMatched && <i className="fas fa-check-circle text-green-500 mt-1"></i>}
+                        {filteredShamrock.map(item => (
+                            <div key={item.id} onClick={() => handleSelect(item)} className={`p-3 border-b card-hover ${selectedItem?.id === item.id ? 'card-selected' : ''}`}>
+                                <div className="flex justify-between">
+                                    <div className="font-medium text-slate-800">{item.desc}</div>
+                                    {matches[item.id] && <i className="fas fa-check-circle text-green-500"></i>}
                                 </div>
-                            );
-                        })}
+                                <div className="text-xs text-slate-400 mt-1">{item.brand} #{item.id}</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* CENTER COLUMN: Matching Workbench */}
+                {/* CENTER COL */}
                 <div className="w-1/3 bg-slate-50 flex flex-col border-r">
                     {selectedItem ? (
                         <>
-                            {/* Selected Header */}
-                            <div className="p-4 bg-white border-b shadow-sm sticky top-0 z-10">
-                                <div className="text-xs text-blue-600 font-bold uppercase tracking-wide mb-1">Current Item (Shamrock)</div>
-                                <h2 className="text-lg font-bold text-slate-800 leading-snug">{selectedItem.desc}</h2>
+                            <div className="p-4 bg-white border-b shadow-sm">
+                                <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Matching Item</div>
+                                <h2 className="text-lg font-bold text-slate-900 leading-snug">{selectedItem.desc}</h2>
                                 <div className="flex gap-2 mt-2 text-xs text-slate-500">
-                                    <span className="bg-slate-100 px-2 py-1 rounded">{selectedItem.brand}</span>
-                                    <span className="bg-slate-100 px-2 py-1 rounded">#{selectedItem.id}</span>
+                                    <span className="bg-slate-100 px-2 py-1 rounded border">{selectedItem.brand}</span>
                                 </div>
                             </div>
-
-                            {/* CURRENT MATCH DISPLAY (New Feature) */}
+                            
+                            {/* MATCHED STATE */}
                             {matches[selectedItem.id] && (
-                                <div className="p-4 bg-blue-50 border-b border-blue-100">
+                                <div className="bg-blue-50 p-4 border-b border-blue-100">
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold text-blue-600 uppercase">Currently Matched To:</span>
-                                        <button 
-                                            onClick={() => handleUnmatch(selectedItem.id)}
-                                            className="text-xs bg-white text-red-500 hover:text-red-700 border border-red-200 px-2 py-1 rounded shadow-sm flex items-center gap-1"
-                                        >
-                                            <i className="fas fa-times"></i> Unmatch Item
+                                        <span className="text-xs font-bold text-blue-600 uppercase"><i className="fas fa-link"></i> Current Match</span>
+                                        <button onClick={() => handleUnmatch(selectedItem.id)} className="bg-white text-red-500 border border-red-200 text-xs px-3 py-1 rounded hover:bg-red-50 shadow-sm">
+                                            <i className="fas fa-unlink"></i> Unmatch
                                         </button>
                                     </div>
-                                    <div className="bg-white p-3 rounded border border-blue-200 shadow-sm">
-                                        {(() => {
-                                            const matchId = matches[selectedItem.id];
-                                            const matchedItem = usFoodsItems.find(u => u.id === matchId);
-                                            if (!matchedItem) return <span className="text-red-500">Error: Item not found</span>;
-                                            return (
-                                                <div>
-                                                    <div className="font-bold text-slate-800">{matchedItem.desc}</div>
-                                                    <div className="text-xs text-slate-500 mt-1">{matchedItem.brand} | {matchedItem.price}</div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
+                                    {(() => {
+                                        const mItem = usFoodsItems.find(u => u.id === matches[selectedItem.id]);
+                                        return mItem ? (
+                                            <div className="bg-white p-3 rounded border border-blue-200 shadow-sm">
+                                                <div className="font-bold text-slate-800">{mItem.desc}</div>
+                                                <div className="text-xs text-slate-500 mt-1">{mItem.brand} • {mItem.price}</div>
+                                            </div>
+                                        ) : <div className="text-red-500">Item Data Missing</div>
+                                    })()}
                                 </div>
                             )}
 
-                            {/* Search Bar */}
                             <div className="p-2 bg-slate-100 border-b">
-                                <input 
-                                    type="text" 
-                                    className="w-full p-2 border rounded text-sm"
-                                    placeholder="Search US Foods items..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                                <input type="text" className="w-full p-2 border rounded shadow-sm focus:ring-2 ring-blue-200 outline-none" placeholder="Search US Foods..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-
-                            {/* Suggestions List */}
                             <div className="scroll-area p-2">
-                                <div className="text-xs font-bold text-slate-400 uppercase mb-2 px-2">
-                                    {searchTerm ? "Search Results" : "Top Suggestions"}
-                                </div>
-                                {filteredSuggestions.map(uItem => {
-                                    const isMatched = matches[selectedItem.id] === uItem.id;
-                                    return (
-                                        <div 
-                                            key={uItem.id}
-                                            onClick={() => handleMatch(selectedItem.id, uItem.id)}
-                                            className={`p-3 mb-2 bg-white rounded border shadow-sm cursor-pointer hover:ring-2 ring-blue-400 transition-all ${isMatched ? 'ring-2 ring-green-500 bg-green-50' : ''}`}
-                                        >
-                                            <div className="font-medium text-slate-800">{uItem.desc}</div>
-                                            <div className="flex justify-between mt-2 text-xs text-slate-500">
-                                                <span>{uItem.brand}</span>
-                                                <span className="font-bold text-slate-700">{uItem.price}</span>
-                                            </div>
-                                            {!searchTerm && <div className="mt-1 text-[10px] text-blue-400 text-right">Match Score: {Math.round(uItem.score * 100)}%</div>}
+                                {filteredSuggestions.map(uItem => (
+                                    <div key={uItem.id} onClick={() => handleMatch(selectedItem.id, uItem.id)} 
+                                        className={`p-3 mb-2 bg-white rounded border shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-400 ${matches[selectedItem.id] === uItem.id ? 'ring-2 ring-green-500 bg-green-50' : ''}`}>
+                                        <div className="font-medium text-slate-800">{uItem.desc}</div>
+                                        <div className="flex justify-between mt-2 text-xs text-slate-500">
+                                            <span>{uItem.brand}</span>
+                                            <span className="font-bold text-slate-700">{uItem.price}</span>
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                ))}
                             </div>
                         </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
-                            <i className="fas fa-hand-pointer text-4xl mb-4"></i>
-                            <p>Select an item on the left to start matching</p>
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 p-10 text-center">
+                            <i className="fas fa-mouse-pointer text-3xl mb-4 opacity-50"></i>
+                            <p>Select an item on the left to begin matching.</p>
                         </div>
                     )}
                 </div>
 
-                {/* RIGHT COLUMN: Matches Review */}
+                {/* RIGHT COL */}
                 <div className="w-1/3 bg-white flex flex-col">
-                    <div className="p-3 border-b bg-slate-50 font-bold text-slate-600">
-                        Matched Items ({matchCount})
-                    </div>
+                    <div className="p-3 border-b bg-slate-50 font-bold text-slate-600 text-xs uppercase tracking-wider">Matched List ({matchCount})</div>
                     <div className="scroll-area">
                         {shamrockItems.filter(s => matches[s.id]).map(sItem => {
-                            const matchId = matches[sItem.id];
-                            const uItem = usFoodsItems.find(u => u.id === matchId);
+                            const uItem = usFoodsItems.find(u => u.id === matches[sItem.id]);
                             if (!uItem) return null;
-
                             return (
                                 <div key={sItem.id} className="p-3 border-b group hover:bg-red-50 transition-colors relative">
-                                    <div className="flex gap-2 mb-1">
-                                        <div className="w-1/2">
-                                            <div className="text-xs text-slate-400">Shamrock</div>
-                                            <div className="font-medium text-xs leading-tight">{sItem.desc}</div>
-                                        </div>
-                                        <div className="text-slate-300"><i className="fas fa-arrow-right"></i></div>
-                                        <div className="w-1/2">
-                                            <div className="text-xs text-slate-400">US Foods</div>
-                                            <div className="font-medium text-xs leading-tight text-blue-700">{uItem.desc}</div>
-                                            <div className="text-[10px] text-slate-500 mt-1">{uItem.price}</div>
-                                        </div>
+                                    <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center text-xs">
+                                        <div className="text-slate-600 truncate" title={sItem.desc}>{sItem.desc}</div>
+                                        <i className="fas fa-arrow-right text-slate-300"></i>
+                                        <div className="text-blue-700 font-medium truncate" title={uItem.desc}>{uItem.desc}</div>
                                     </div>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); handleUnmatch(sItem.id); }}
-                                        className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100"
-                                        title="Remove Match"
-                                    >
-                                        <i className="fas fa-times-circle"></i>
+                                    <button onClick={(e) => { e.stopPropagation(); handleUnmatch(sItem.id); }} className="absolute top-1 right-1 text-red-300 hover:text-red-600 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <i className="fas fa-times"></i>
                                     </button>
                                 </div>
                             )
                         })}
                     </div>
                 </div>
-
             </div>
+
+            {/* CLOUD SETTINGS MODAL */}
+            {cloudModalOpen && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+                        <h3 className="font-bold text-lg mb-4">GitHub Cloud Setup</h3>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">GitHub Username</label>
+                                <input type="text" className="w-full border p-2 rounded" value={githubOwner} onChange={e => setGithubOwner(e.target.value)} placeholder="e.g. yourname" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Repository Name</label>
+                                <input type="text" className="w-full border p-2 rounded" value={githubRepo} onChange={e => setGithubRepo(e.target.value)} placeholder="e.g. parma-matcher" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">Personal Access Token (PAT)</label>
+                                <input type="password" className="w-full border p-2 rounded" value={githubToken} onChange={e => setGithubToken(e.target.value)} placeholder="ghp_..." />
+                                <p className="text-[10px] text-slate-400 mt-1">Token needs 'repo' scope.</p>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button onClick={() => setCloudModalOpen(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded">Cancel</button>
+                            <button onClick={saveSettings} className="px-4 py-2 bg-blue-600 text-white rounded font-bold">Save & Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
