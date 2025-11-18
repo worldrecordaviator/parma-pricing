@@ -11,8 +11,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8fafc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        .card-hover:hover { background-color: #f1f5f9; cursor: pointer; }
-        .card-selected { background-color: #e0f2fe; border-left: 4px solid #0284c7; }
+        .card-hover:hover { background-color: #f0fdf4; cursor: pointer; border-left-color: #16a34a; }
+        .card-selected { background-color: #dcfce7; border-left: 4px solid #16a34a; }
+        .suggestion-hover:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .scroll-area { scrollbar-width: thin; overflow-y: auto; height: 100%; }
         .scroll-area::-webkit-scrollbar { width: 8px; }
         .scroll-area::-webkit-scrollbar-track { background: transparent; }
@@ -28,8 +29,7 @@ const { useState, useEffect, useMemo } = React;
 // =================================================================
 //  CONFIGURATION: PASTE YOUR GOOGLE SCRIPT URL HERE
 // =================================================================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuMh45s7zApb3p-eR-Sk_Sxk4QQj7y2sQ5MQCVmsk31QfNjnI5CZdAUHMPAGXZte8g/exec"; // <--- PASTE INSIDE QUOTES
-// Example: "https://script.google.com/macros/s/AKfycbx.../exec"
+const GOOGLE_SCRIPT_URL = ""; 
 
 // ==========================================
 // LOGIC
@@ -598,9 +598,9 @@ const App = () => {
         setUsFoodsItems(usParsed);
         setShamrockItems(shamParsed);
 
-        // Initial Load Strategy: Cloud -> Local -> AutoMatch
+        // Initial Load Strategy
         if (GOOGLE_SCRIPT_URL) {
-            fetchCloudData();
+            fetchCloudData(shamParsed, usParsed);
         } else {
             const savedMatches = localStorage.getItem('parma_matches');
             if (savedMatches) setMatches(JSON.parse(savedMatches));
@@ -625,21 +625,25 @@ const App = () => {
     useEffect(() => { localStorage.setItem('parma_matches', JSON.stringify(matches)); }, [matches]);
 
     // --- CLOUD ACTIONS ---
-    const fetchCloudData = async () => {
+    const fetchCloudData = async (sItems, uItems) => {
         if(!GOOGLE_SCRIPT_URL) return;
         setIsLoading(true);
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
             const data = await res.json();
+            
+            // CRITICAL FIX: If cloud returns empty data (first run), Trigger Auto-Match
             if (Object.keys(data).length > 0) {
                 setMatches(data);
                 setLastCloudSave(new Date());
             } else {
-                // No cloud data yet, fallback to auto-match
-                runAutoMatch(shamrockItems, usFoodsItems);
+                console.log("Cloud empty, running auto-match...");
+                runAutoMatch(sItems, uItems);
             }
         } catch(err) {
             console.error("Cloud Load Error", err);
+            // Fallback if cloud fails
+            runAutoMatch(sItems, uItems);
         }
         setIsLoading(false);
     };
@@ -650,7 +654,7 @@ const App = () => {
         try {
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Google Script quirk for simple posting
+                mode: 'no-cors', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(matches)
             });
@@ -721,7 +725,7 @@ const App = () => {
                 <div className="flex gap-3 items-center">
                     <button onClick={pushCloudData} disabled={isLoading} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded font-bold flex items-center gap-2 shadow-sm transition">
                         {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cloud-upload-alt"></i>}
-                        <span>Save Work</span>
+                        <span>Save to Cloud</span>
                     </button>
                     <button onClick={exportCSV} className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded font-bold flex items-center gap-2 shadow-sm transition ml-2">
                         <i className="fas fa-file-csv"></i> Export
@@ -731,10 +735,15 @@ const App = () => {
 
             <div className="flex flex-1 overflow-hidden relative">
                 <div className="w-1/3 border-r bg-white flex flex-col">
-                    <div className="p-2 border-b bg-slate-50 flex justify-around text-xs font-bold text-slate-500">
-                        {['all','unmatched','matched'].map(m => (
-                            <button key={m} onClick={() => setFilterMode(m)} className={`px-3 py-1 rounded uppercase ${filterMode===m?'bg-blue-100 text-blue-600':''}`}>{m}</button>
-                        ))}
+                    <div className="p-3 border-b bg-green-50 border-green-100">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-bold text-green-800 text-sm"><i className="fas fa-list mr-1"></i> Shamrock Foods (Source)</h3>
+                        </div>
+                        <div className="flex justify-around text-xs font-bold text-slate-500 bg-white rounded p-1 border">
+                            {['all','unmatched','matched'].map(m => (
+                                <button key={m} onClick={() => setFilterMode(m)} className={`px-3 py-1 rounded uppercase ${filterMode===m?'bg-green-100 text-green-700':''}`}>{m}</button>
+                            ))}
+                        </div>
                     </div>
                     <div className="scroll-area">
                         {filteredShamrock.map(item => (
@@ -753,7 +762,7 @@ const App = () => {
                     {selectedItem ? (
                         <>
                             <div className="p-4 bg-white border-b shadow-sm">
-                                <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Matching Item</div>
+                                <div className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1">Selected Shamrock Item</div>
                                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{selectedItem.desc}</h2>
                                 <div className="flex gap-2 mt-2 text-xs text-slate-500">
                                     <span className="bg-slate-100 px-2 py-1 rounded border">{selectedItem.brand}</span>
@@ -779,12 +788,13 @@ const App = () => {
                                 </div>
                             )}
                             <div className="p-2 bg-slate-100 border-b">
-                                <input type="text" className="w-full p-2 border rounded shadow-sm focus:ring-2 ring-blue-200 outline-none" placeholder="Search US Foods..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                <div className="text-xs font-bold text-slate-400 uppercase px-2 mb-1 mt-1">Search US Foods (Target)</div>
+                                <input type="text" className="w-full p-2 border rounded shadow-sm focus:ring-2 ring-blue-200 outline-none" placeholder="Type to search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
                             <div className="scroll-area p-2">
                                 {filteredSuggestions.map(uItem => (
                                     <div key={uItem.id} onClick={() => handleMatch(selectedItem.id, uItem.id)} 
-                                        className={`p-3 mb-2 bg-white rounded border shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-400 ${matches[selectedItem.id] === uItem.id ? 'ring-2 ring-green-500 bg-green-50' : ''}`}>
+                                        className={`p-3 mb-2 bg-white rounded border shadow-sm cursor-pointer hover:ring-2 hover:ring-blue-400 suggestion-hover ${matches[selectedItem.id] === uItem.id ? 'ring-2 ring-green-500 bg-green-50' : ''}`}>
                                         <div className="font-medium text-slate-800">{uItem.desc}</div>
                                         <div className="flex justify-between mt-2 text-xs text-slate-500">
                                             <span>{uItem.brand}</span>
@@ -803,7 +813,9 @@ const App = () => {
                 </div>
 
                 <div className="w-1/3 bg-white flex flex-col">
-                    <div className="p-3 border-b bg-slate-50 font-bold text-slate-600 text-xs uppercase tracking-wider">Matched List ({matchCount})</div>
+                    <div className="p-3 border-b bg-slate-50 font-bold text-slate-600 text-sm flex items-center gap-2">
+                         <i className="fas fa-check-double text-slate-400"></i> Completed Matches ({matchCount})
+                    </div>
                     <div className="scroll-area">
                         {shamrockItems.filter(s => matches[s.id]).map(sItem => {
                             const uItem = usFoodsItems.find(u => u.id === matches[sItem.id]);
@@ -827,11 +839,9 @@ const App = () => {
         </div>
     );
 };
- 
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
 </script>
 </body>
 </html>
-
-
