@@ -19,6 +19,7 @@
         .scroll-area::-webkit-scrollbar-track { background: transparent; }
         .scroll-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
         .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
+        .badge { @apply text-[10px] font-bold px-1.5 py-0.5 rounded border; }
     </style>
 </head>
 <body>
@@ -40,14 +41,17 @@ const parseUsFoods = (raw) => {
     if (!raw) return [];
     return raw.trim().split('\n').map(line => {
         try {
-            const regex = /^(\d+),(.*?),(\d+),"(.*?)",(.*?),(.*?),(\$.*?),/;
+            // Regex to capture: ID, Group, ItemID, "Desc", Brand, PackSize, Price, UOM
+            const regex = /^(\d+),(.*?),(\d+),"(.*?)",(.*?),(.*?),(\$.*?),(.*)/;
             const match = line.match(regex);
             if (match) {
                 return {
                     id: match[3],
                     desc: match[4],
                     brand: match[5],
+                    packSize: match[6],
                     price: match[7],
+                    uom: match[8].trim(),
                     raw: line
                 };
             }
@@ -56,12 +60,16 @@ const parseUsFoods = (raw) => {
                 const id = parts[2];
                 const rawDesc = parts[3] || ""; 
                 const brand = parts[4];
+                const packSize = parts[5];
                 const price = parts.length > 2 ? parts[parts.length-2] : "$0.00";
+                const uom = parts[parts.length-1];
                 return { 
                     id: id, 
                     desc: rawDesc.replace(/"/g, ''), 
                     brand: brand, 
+                    packSize: packSize,
                     price: price, 
+                    uom: uom ? uom.trim() : "",
                     raw: line 
                 };
             }
@@ -74,17 +82,26 @@ const parseUsFoods = (raw) => {
 
 const calculateScore = (str1, str2) => {
     if (!str1 || !str2) return 0;
-    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM'];
+    // Updated Stop Words to be more aggressive against Size/Unit variations
+    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM', 'COUNT', 'AVG', 'LBA', 'W-LID'];
+    
     const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+    
     const set1 = new Set(clean(str1));
     const set2 = new Set(clean(str2));
+    
     const arr1 = Array.from(set1);
     const arr2 = Array.from(set2);
+    
     let exactMatches = 0;
     arr1.forEach(w => { if (set2.has(w)) exactMatches++; });
+    
     const union = new Set([...arr1, ...arr2]).size;
     let score = union === 0 ? 0 : (exactMatches / union);
+    
+    // Bonus for matching the first word (Category)
     if (arr1[0] && arr2[0] && arr1[0] === arr2[0]) score += 0.3;
+    
     return score;
 };
 
@@ -110,7 +127,6 @@ const generateAutoMatches = (sItems, uItems) => {
 // Helper to extract numeric value from price string
 const getPriceValue = (priceStr) => {
     if (!priceStr) return 0;
-    // Remove '$', commas, and whitespace, then parse
     return parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
 };
 
@@ -564,10 +580,7 @@ const App = () => {
 
     // --- INIT ---
     useEffect(() => {
-        // Parse Data
         const usParsed = parseUsFoods(US_FOODS_RAW);
-        
-        // UPDATE: Parse Shamrock to include Price
         const shamParsed = SHAMROCK_RAW.trim().split('\n').map(line => {
             const parts = line.split('|');
             if(parts.length < 3) return null;
@@ -584,9 +597,11 @@ const App = () => {
         setUsFoodsItems(usParsed);
         setShamrockItems(shamParsed);
 
+        // 1. Run Auto-Match Locally
         const autoMatches = generateAutoMatches(shamParsed, usParsed);
         setMatches(autoMatches);
 
+        // 2. Check Cloud (Overwrite if exists)
         if (GOOGLE_SCRIPT_URL) {
             fetchCloudData(shamParsed, usParsed, autoMatches);
         }
@@ -635,6 +650,14 @@ const App = () => {
             console.error(err);
         }
         setIsLoading(false);
+    };
+
+    const handleRecalculate = () => {
+        if (confirm("This will erase manual changes and re-run the auto-matcher. Continue?")) {
+            const autoMatches = generateAutoMatches(shamrockItems, usFoodsItems);
+            setMatches(autoMatches);
+            alert("Matches Recalculated! Don't forget to Save to Cloud.");
+        }
     };
 
     // --- EXPORT ---
@@ -693,6 +716,9 @@ const App = () => {
                     </div>
                 </div>
                 <div className="flex gap-3 items-center">
+                    <button onClick={handleRecalculate} className="text-slate-500 hover:text-blue-600 border border-slate-300 px-3 py-2 rounded flex items-center gap-2 transition">
+                        <i className="fas fa-sync-alt"></i> Recalculate
+                    </button>
                     <button onClick={pushCloudData} disabled={isLoading} className="btn-primary px-4 py-2 rounded font-bold flex items-center gap-2 shadow-sm transition">
                         {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cloud-upload-alt"></i>}
                         <span>Save to Cloud</span>
@@ -724,7 +750,7 @@ const App = () => {
                                 </div>
                                 <div className="flex justify-between mt-1">
                                     <div className="text-xs text-slate-400">{item.brand} #{item.id}</div>
-                                    <div className="text-xs font-bold text-green-700">{item.price} / {item.unit}</div>
+                                    <div className="text-xs font-bold text-green-700 bg-green-100 px-1 rounded">{item.price} / {item.unit}</div>
                                 </div>
                             </div>
                         ))}
