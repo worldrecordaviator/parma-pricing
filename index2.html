@@ -29,12 +29,12 @@
 const { useState, useEffect, useMemo } = React;
 
 // =================================================================
-//  CONFIGURATION
+//  1. CONFIGURATION
 // =================================================================
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuMh45s7zApb3p-eR-Sk_Sxk4QQj7y2sQ5MQCVmsk31QfNjnI5CZdAUHMPAGXZte8g/exec"; 
 
 // =================================================================
-//  DATA PARSERS & LOGIC
+//  2. HELPER FUNCTIONS
 // =================================================================
 
 const parseUsFoods = (raw) => {
@@ -73,23 +73,47 @@ const parseUsFoods = (raw) => {
                 };
             }
             return null;
-        } catch (e) { return null; }
+        } catch (e) {
+            return null; 
+        }
     }).filter(i => i && i.id);
 };
 
 const calculateScore = (str1, str2) => {
     if (!str1 || !str2) return 0;
-    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM', 'COUNT', 'AVG', 'LBA', 'W-LID'];
-    const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+    // EXPANDED Stop Words List to ignore more sizing noise
+    const stopWords = [
+        'PACKER', 'BRAND', 'LB', 'LBA', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'CT', 
+        'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM', 
+        'COUNT', 'AVG', 'W-LID', 'SHELL', 'WHOLE', 'WHL', 'SOLID', 'LIQUID', 'DICE', 'DICED', 'SLI', 'SLICED'
+    ];
+    
+    // CLEANING: Remove numbers (0-9) to match purely on "Product Name"
+    const clean = (s) => s.toUpperCase()
+        .replace(/[0-9]/g, '') // Remove digits
+        .replace(/[^A-Z\s]/g, ' ') // Remove special chars
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopWords.includes(w));
+    
     const set1 = new Set(clean(str1));
     const set2 = new Set(clean(str2));
+    
     const arr1 = Array.from(set1);
     const arr2 = Array.from(set2);
+    
+    // Calculate matches
     let exactMatches = 0;
     arr1.forEach(w => { if (set2.has(w)) exactMatches++; });
+    
     const union = new Set([...arr1, ...arr2]).size;
     let score = union === 0 ? 0 : (exactMatches / union);
-    if (arr1[0] && arr2[0] && arr1[0] === arr2[0]) score += 0.3;
+    
+    // AGGRESSIVE FIRST WORD BONUS
+    // If the main noun matches (Chicken, Tomato, etc), give a huge boost
+    if (arr1[0] && arr2[0] && arr1[0] === arr2[0]) {
+        score += 0.4; 
+    }
+    
     return score;
 };
 
@@ -100,7 +124,8 @@ const generateAutoMatches = (sItems, uItems) => {
         let bestMatchId = null;
         uItems.forEach(uItem => {
             const score = calculateScore(sItem.desc, uItem.desc);
-            if (score > 0.45 && score > bestScore) { 
+            // LOWER THRESHOLD: 0.35 is looser than 0.45
+            if (score > 0.35 && score > bestScore) { 
                 bestScore = score; 
                 bestMatchId = uItem.id; 
             }
@@ -118,7 +143,7 @@ const getPriceValue = (priceStr) => {
 };
 
 // =================================================================
-//  FULL DATA (RESTORED)
+//  3. RAW DATA
 // =================================================================
 
 const SHAMROCK_RAW = `1|0036937|WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE|PRPKO|$105.88|CS
@@ -587,11 +612,9 @@ const App = () => {
         setUsFoodsItems(usParsed);
         setShamrockItems(shamParsed);
 
-        // 1. Run Auto-Match Locally
         const autoMatches = generateAutoMatches(shamParsed, usParsed);
         setMatches(autoMatches);
 
-        // 2. Fetch Cloud Data (Overrides local if exists)
         if (GOOGLE_SCRIPT_URL) {
             fetchCloudData(shamParsed, usParsed, autoMatches);
         }
@@ -642,13 +665,16 @@ const App = () => {
         setIsLoading(false);
     };
 
+    // NEW: Recalculate Handler
     const handleRecalculate = async () => {
-        if (confirm("Reset matches to defaults? This will overwrite the Cloud Save immediately.")) {
+        if (confirm("Recalculate all matches? This will reset manual changes and save a new version to the cloud.")) {
             setIsLoading(true);
+            
+            // 1. Run Auto-Match Logic
             const autoMatches = generateAutoMatches(shamrockItems, usFoodsItems);
             setMatches(autoMatches);
-            
-            // Push to cloud immediately to overwrite the "bad" save
+
+            // 2. Immediately Push to Cloud (to overwrite the "bad" 93-match save)
             try {
                 const formData = new URLSearchParams();
                 formData.append("payload", JSON.stringify(autoMatches));
@@ -656,17 +682,15 @@ const App = () => {
                 await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData
                 });
 
                 setLastCloudSave(new Date());
-                alert("Recalculated and Saved to Cloud!");
-            } catch (e) {
-                console.error(e);
-                alert("Recalculated locally, but failed to save to cloud.");
+                alert("Recalculated & Saved to Cloud! Matches: " + Object.keys(autoMatches).length);
+            } catch (err) {
+                console.error(err);
+                alert("Recalculated locally, but Cloud Save failed.");
             }
             setIsLoading(false);
         }
@@ -729,7 +753,7 @@ const App = () => {
                 </div>
                 <div className="flex gap-3 items-center">
                     <button onClick={handleRecalculate} className="text-slate-500 hover:text-blue-600 border border-slate-300 px-3 py-2 rounded flex items-center gap-2 transition shadow-sm text-xs font-bold">
-                        <i className="fas fa-sync-alt"></i> Recalculate
+                        <i className="fas fa-sync-alt"></i> Recalculate Matches
                     </button>
                     <button onClick={pushCloudData} disabled={isLoading} className="btn-primary px-4 py-2 rounded font-bold flex items-center gap-2 shadow-sm transition">
                         {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cloud-upload-alt"></i>}
