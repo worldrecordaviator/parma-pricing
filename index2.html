@@ -29,12 +29,12 @@
 const { useState, useEffect, useMemo } = React;
 
 // =================================================================
-//  1. CONFIGURATION
+//  CONFIGURATION
 // =================================================================
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuMh45s7zApb3p-eR-Sk_Sxk4QQj7y2sQ5MQCVmsk31QfNjnI5CZdAUHMPAGXZte8g/exec"; 
 
 // =================================================================
-//  2. HELPER FUNCTIONS
+//  DATA PARSERS & LOGIC
 // =================================================================
 
 const parseUsFoods = (raw) => {
@@ -73,15 +73,13 @@ const parseUsFoods = (raw) => {
                 };
             }
             return null;
-        } catch (e) {
-            return null; 
-        }
+        } catch (e) { return null; }
     }).filter(i => i && i.id);
 };
 
 const calculateScore = (str1, str2) => {
     if (!str1 || !str2) return 0;
-    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM'];
+    const stopWords = ['PACKER', 'BRAND', 'LB', 'OZ', 'CS', 'PK', 'EA', 'GAL', 'CASE', 'BOX', 'BAG', 'FRESH', 'FROZEN', 'REF', 'RAW', 'COOKED', 'IM', 'IMP', 'DOM', 'COUNT', 'AVG', 'LBA', 'W-LID'];
     const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
     const set1 = new Set(clean(str1));
     const set2 = new Set(clean(str2));
@@ -114,14 +112,13 @@ const generateAutoMatches = (sItems, uItems) => {
     return newMatches;
 };
 
-// Helper to extract numeric value from price string
 const getPriceValue = (priceStr) => {
     if (!priceStr) return 0;
     return parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
 };
 
 // =================================================================
-//  3. RAW DATA
+//  FULL DATA (RESTORED)
 // =================================================================
 
 const SHAMROCK_RAW = `1|0036937|WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE|PRPKO|$105.88|CS
@@ -568,8 +565,12 @@ const App = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [lastCloudSave, setLastCloudSave] = useState(null);
 
+    // --- INIT ---
     useEffect(() => {
+        // Parse Data
         const usParsed = parseUsFoods(US_FOODS_RAW);
+        
+        // UPDATE: Parse Shamrock to include Price
         const shamParsed = SHAMROCK_RAW.trim().split('\n').map(line => {
             const parts = line.split('|');
             if(parts.length < 3) return null;
@@ -586,14 +587,17 @@ const App = () => {
         setUsFoodsItems(usParsed);
         setShamrockItems(shamParsed);
 
+        // 1. Run Auto-Match Locally
         const autoMatches = generateAutoMatches(shamParsed, usParsed);
         setMatches(autoMatches);
 
+        // 2. Fetch Cloud Data (Overrides local if exists)
         if (GOOGLE_SCRIPT_URL) {
             fetchCloudData(shamParsed, usParsed, autoMatches);
         }
     }, []);
 
+    // --- CLOUD ACTIONS ---
     const fetchCloudData = async (sItems, uItems, localMatches) => {
         if(!GOOGLE_SCRIPT_URL) return;
         setIsLoading(true);
@@ -604,6 +608,8 @@ const App = () => {
             if (Object.keys(data).length > 0) {
                 setMatches(data); 
                 setLastCloudSave(new Date());
+            } else {
+                console.log("Cloud empty, keeping auto-matches.");
             }
         } catch(err) {
             console.error("Cloud Load Error", err);
@@ -636,14 +642,37 @@ const App = () => {
         setIsLoading(false);
     };
 
-    const handleRecalculate = () => {
-        if (confirm("This will erase the saved cloud data and reset to the auto-matcher defaults. Are you sure?")) {
+    const handleRecalculate = async () => {
+        if (confirm("Reset matches to defaults? This will overwrite the Cloud Save immediately.")) {
+            setIsLoading(true);
             const autoMatches = generateAutoMatches(shamrockItems, usFoodsItems);
             setMatches(autoMatches);
-            // Optional: You could force a save here, but better to let user verify then save.
+            
+            // Push to cloud immediately to overwrite the "bad" save
+            try {
+                const formData = new URLSearchParams();
+                formData.append("payload", JSON.stringify(autoMatches));
+
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData
+                });
+
+                setLastCloudSave(new Date());
+                alert("Recalculated and Saved to Cloud!");
+            } catch (e) {
+                console.error(e);
+                alert("Recalculated locally, but failed to save to cloud.");
+            }
+            setIsLoading(false);
         }
     };
 
+    // --- EXPORT ---
     const exportCSV = () => {
         let csvContent = "data:text/csv;charset=utf-8,Shamrock ID,Shamrock Desc,Shamrock Brand,Shamrock Price,USFoods ID,USFoods Desc,USFoods Price\n";
         shamrockItems.forEach(sItem => {
@@ -663,6 +692,7 @@ const App = () => {
         link.click();
     };
 
+    // --- HANDLERS ---
     const handleSelect = (item) => { setSelectedItem(item); setSearchTerm(""); };
     const handleMatch = (sid, uid) => { setMatches(prev => ({...prev, [sid]: uid})); };
     const handleUnmatch = (sid) => { const m = {...matches}; delete m[sid]; setMatches(m); };
