@@ -40,10 +40,8 @@ const parseUsFoods = (raw) => {
     if (!raw) return [];
     return raw.trim().split('\n').map(line => {
         try {
-            // Regex for lines with quotes
             const regex = /^(\d+),(.*?),(\d+),"(.*?)",(.*?),(.*?),(\$.*?),/;
             const match = line.match(regex);
-            
             if (match) {
                 return {
                     id: match[3],
@@ -53,14 +51,12 @@ const parseUsFoods = (raw) => {
                     raw: line
                 };
             }
-            // Fallback for lines without quotes
             const parts = line.split(',');
             if (parts.length > 4) {
                 const id = parts[2];
                 const rawDesc = parts[3] || ""; 
                 const brand = parts[4];
                 const price = parts.length > 2 ? parts[parts.length-2] : "$0.00";
-                
                 return { 
                     id: id, 
                     desc: rawDesc.replace(/"/g, ''), 
@@ -414,221 +410,6 @@ const US_FOODS_RAW = `1,Protein,1843127,"HALIBUT, 2-6 LB FILLET BONELESS-SKINLES
 298,,3365814,"SYRUP, FOUNTAIN PIBB XTRA BAG-IN-BOX",MR. PIBB,5 GA,$129.40,CS
 299,,2424273,"SYRUP, VANILLA ITALIAN STYLE PLASTIC BOTTLE COFFEE BEVERAGE",MONIN,4/1 LT,$46.78,CS`;
 
-const SHAMROCK_RAW = `1|0036937|WRAP, FOOD PAPR DRY WAX 12X12 WHT GREASE|PRPKO|CS
-2|0001693|CHICKEN, BRST DBL B&S W-RIB MEAT|RCSIG|CS
-3|3622331|SAUCE, DEMI-GLACE DE VIANDE CLASSIC|BONEW|CS
-4|3609201|PEPPER, BELL CHOPR GLD 1 1/9BU|P. L.|CS
-5|4492431|PASTA, LASAGNA FLAT SHEET 8.25X10.25 FZN|VLAFO|CS
-6|1733311|TOMATO, GRP RED WHL CLAMSHELL REFRIG FRS|MFC|CS
-7|1930551|BUTTER, SOLID UNSLTD AA|SHAMF|CS
-8|3443443|SCRUBBER, SCOURING KITCHEN STNLS|PRPKO|EA
-9|2198291|OLIVE, KALAMATA WEDGES|ROLND|CS
-10|3743791|CUCUMBER, WHL SK ON 5LB MINI PK|MFC|CS
-11|3328181|SYRUP, GINGER ALE BIB|SEGRM|CS
-12|2729741|PAN, STEAM TABLE ALUM FOIL HALF SIZE REC|PRPKO|CS
-13|1961101|SYRUP, TONIC MIX|SEGRM|CS
-14|3327861|CONTAINER, PAPER 32Z WHT W-LID|SOLO|CS
-15|2733091|FOIL, 18"X500' STND|PRPKO|CS
-16|1959851|SYRUP, LEMONADE ORIG BIB|MMAID|CS
-17|1950621|OIL, CANOLA CLR FRY ZTF|CPRVL|CS
-18|1831881|SYRUP, VANILLA|MONIN|CS
-19|4595411|SOAP, HND ANTIBAC|PRCLN|CS
-20|3512891|TRAY, 16" PLATTER PLEASERS BLACK|PRPKO|CS
-21|4604211|SPICE, NUTMEG GRND|KATYS|CS
-22|4612511|SPICE, PEPPER BLK WHL|KATYS|CS
-23|3579441|NUTS, FILBERT BLANCHED WHL DRY RSTD|FISHR|CS
-24|2899711|CHEESE, RICOTTA SOPRAFFINA FRSH|GRNDE|CS
-25|1908741|HERB, PARSLEY W&T|RSS|CS
-26|4270121|BEEF, GRND 81/19 CHUB REFRIG|EVR|LB
-27|2967841|FILM, 12"X2000' CUTTER BOX|PRPKO|CS
-28|4067861|CRUST, PIZZA 12" PRE-BAKED GF VEGAN|SEPAS|CS
-29|4670621|PROSCIUTTO, PARMA WHL BNLS AGED 14|PMCTO|LB
-30|2836091|HERB, THYME 1LB|MFC|CS
-31|4693931|BOX, PIZZA 12" WHT-KRFT 1 7/8" DP|VLAFO|CS
-32|3303531|BLEACH, LIQ 6% GERMICIDAL ULTRA|PROPW|CS
-33|1924051|CRUMBS, BREAD ITAL SEASN|PRGSO|CS
-34|3093071|CAKE, CHOC LAVA DIVINE GF|BRCKD|CS
-35|4135261|CLEANER, GLASS RTU|PRCLN|CS
-36|4334591|LINER, CAN 33GAL 33X41 1.6MIL BLK|PRPKO|CS
-37|4247551|PEPPERONI, SLI BULK|CRMLI|LB
-38|2729861|LID, STEAM PAN FOIL FULL SIZE|PRPKO|CS
-39|1363421|CRUMBS, BREAD JAPANESE PANKO|KIKMN|CS
-40|4670501|CUCUMBER, WHL SK ON 24CT REFRIG|MFC|CS
-41|3566491|KALE, BABY MXD|RSS|CS
-42|4989311|GUANCIALE, PORK DRY CURED|PMCTO|LB
-43|4695751|CARTON, PAPER FOOD #8 KRAFT|PRPKO|CS
-44|3208371|CREAM, WHPD AEROSOL 13Z|SHAMF|CS
-45|1659821|TOMATO, PLUM WHL PLD IN JCE W-BASIL|ALCUC|CS
-46|4140821|[SO] SPICE, CLOVES WHL|DURKE|CS
-47|4615631|OIL, OLV CANOLA XVRGN BLND 90/10|TRIFP|CS
-48|4994511|SALT, SEA WHT GRANULE 3LB KOSHER|KATYO|CS
-49|4729361|EGGPLANT, FANCY 18CT|MFC|CS
-50|4906951|MUSSELS, BLK WHL SHELL CKD 23-29CT|PPORD|CS
-51|4709251|POTATO, RUSSET 100CT|MFC|CS
-52|2917011|WATER, SPARKLING MINERAL 16.9Z PLASTIC B|SANPE|CS
-53|1455251|TOMATO, 4X5 VINE RIPE UP BULK|MFC|CS
-54|1864991|CLAM, WHL SHELL 17-22 CT|PANAP|CS
-55|1803641|LIME, 52-56EA MINI PK|P. L.|CS
-56|4124451|BRUSSELS SPROUT, GRN HALF CLEANED 5LB BA|RSS|CS
-57|4630061|JUICE, CLAM|SEAWT|CS
-58|4995231|JUICE, ORNG 100% NSA W-VIT C 7.2Z CAN SH|REJUO|CS
-59|3126111|CHEESE, MOZZ LOG 11.4Z IN BRINE REFRIG|GRNDE|CS
-60|3564471|PORK, SHANK BRAISED SOUS VIDE PCH|BONEW|LB
-61|4989331|PROSCIUTTO, COTTO|PMCTO|LB
-62|4608071|SPICE, CINN STICK|KATYS|CS
-63|1001812|CHEESE, BURRATA BALL IN WTR 4Z CUP|VLAFO|CS
-64|2472023|VINEGAR, BALSAMIC IMP|VLAFO|EA
-65|4035501|RICE, RISOTTO ARBORIO SUPERFINO|BERET|CS
-66|5043161|CHEESE, PARM GRANA PADANO ITAL|GRANA|LB
-67|5002401|SQUASH, YLW MINI PK|MFC|CS
-68|2051053|JUICE, LIME FRSH SQZ|RSS|EA
-69|1303441|LETTUCE, ROMAINE HRT JUMBO|P. L.|CS
-70|1961751|ICE CREAM, STRAWBRY 10.1% HARD PACK 3GAL|SHAMF|CS
-71|1787561|ICE CREAM, SPUMONI 10.1% HARD PACK 3GAL|HILND|CS
-72|3409291|DETERGENT, DISHWASHER PINK CONC|JACKP|CS
-73|2287201|SPINACH, TRIPLE CLEANED|RSS|CS
-74|3234681|HALF & HALF, 32Z BTL REFRIG ESL|SHAMF|CS
-75|4698401|ICE CREAM, VANILLA BEAN MADAGASCAR|SWTCR|CS
-76|4604691|SPICE, PEPPER RED CRSH BULK|KATYS|CS
-77|1959771|SYRUP, COKE DIET BIB|COKE|CS
-78|3749803|CHOCOLATE, SHAVING DRK|10DGR|EA
-79|3512921|LID, 16" PET DOME CLEAR PLATTER PLEASERS|PRPKO|CS
-80|2698001|SYRUP, PEACH|MONIN|CS
-81|1959891|SYRUP, SPRITE BIB|SPRIT|CS
-82|4085551|MUSHROOM, PORCINI SLI IN HERBS & OIL|MNU|CS
-83|4693861|BOX, PIZZA 12" KRFT-KRFT 1 7/8" DP|VLAFO|CS
-84|4799471|[OBS] COATING, VEG OIL AEROSOL CAN|EVRLO|CS
-85|2001511|CAPER, NONPAREIL 32Z JAR|VLAFD|CS
-86|1969301|FLOUR, SEMOLINA PASTA #1 HIGH|GMDLF|CS
-87|2472281|PEAR, BARTLETT US #1|P. L.|CS
-88|3127591|TOMATO, SUN DRIED JULIENNE|VLAFO|CS
-89|1992511|CHEESE, MOZZ DICED LMPS FZN|LEPRI|CS
-90|2305841|ARTICHOKE, HRT QTRD IN WTR IMP SPAIN|VLAFO|CS
-91|2377121|SAUCE, CHILI SRIRACHA|SHING|CS
-92|4378211|TOWEL, PAPR HARDWOUND RL 1PLY KRFT|PROSM|CS
-93|2237961|RAVIOLI, LOBSTER MAINE SHERRY CRM|JOSEP|CS
-94|4136751|CLEANER, DEGREASER HVY DTY|PRCLN|CS
-95|4158531|CHEESE, MOZZARELLA BUFFALO FROZEN|LUPAR|CS
-96|2510581|POTATO, MASHED RSTD GRLC REDSKIN ON|LAMBS|CS
-97|4940751|PASTA, CASARECCE GF|GAROF|CS
-98|4698421|ICE CREAM, FRENCH CHOC|SWTCR|CS
-99|4946751|PASTA, LINGUINE RISTORANTE|GAROF|CS
-100|4937731|PASTA, PENNE RIGATE|GAROF|CS
-101|3490201|BAG, BUN PAN LDPE 21X6X35 CLR 1.2 MIL RL|PRPKO|CS
-102|2729751|PAN, FOIL FULL SIZE 20.81X13X3.5|PRPKO|CS
-103|3380223|CANDLE, BIRTHDAY RND WAX 2.1" ASSORT BOX|STRNO|EA
-104|2305571|OLIVE, GRN STFD MANZANO IMP|VLAFO|CS
-105|4110171|WATER, SPARKLING MINERAL 16.9Z|SANPE|CS
-106|4914331|CALAMARI, RING & TENTACLE 4-8"|PPORD|CS
-107|3101911|[JIT] VEAL, CUTLET 6Z CUBED|GCSIG|LB
-108|2497473|JUICE, LEMON FRSH SQZ|RSS|EA
-109|4669631|CONTAINER, PLS 32Z DELI RND CLR PP|PRPKO|CS
-110|4937761|PASTA, SPAGHETTI|GAROF|CS
-111|4991571|PASTA, FARFALLE RISTORANTE|GAROF|CS
-112|1865181|SANITIZER, STERAMINE TABLET MULTI-PURP|STRMN|CS
-113|4457261|PASTA, MANICOTTI CHSE 5" FZN|VLAFO|CS
-114|4695361|CARTON, PAPER FOOD #1 KRAFT|PRPKO|CS
-115|2420601|CARROT, DICED IQF GRD A|BHVSO|CS
-116|3243381|CHEESE, PARM GRTD FRSH IMP|VLAFD|CS
-117|4212701|TISSUE, BATH 2PLY 500 SHEET RL WHT|PRPKO|CS
-118|4547901|SUGAR, GRANULATED FINE BEET|WHTSA|CS
-119|1959761|SYRUP, COKE CLASSIC BIB|COKE|CS
-120|9937741|PEPPER, BLK GRND|P. L.|CS
-121|4670601|PROSCIUTTO, ITALIAN WHL BNLS DRY|PMCTO|LB
-122|1907661|MUSHROOM, WHT SLI 1/4" MED|MFC|CS
-123|3012061|MUSSEL, BLUE 18-27CT WHL SHL CKD|P. L.|CS
-124|4695381|CARTON, PAPER FOOD #3 KRAFT|PRPKO|CS
-125|2161141|SUGAR, PKT IN THE RAW|SUGRW|CS
-126|4516771|SCALLOP, 10-20CT ATL PROC IQF|PPORF|CS
-127|3261763|COCOA, PWDR MACUIRA|CRDLR|EA
-128|1929791|ONION, RED WHL MED 25LB CRTN FRSH|MFC|CS
-129|4681651|SHALLOT, WHL UNPLD 5LB REFRIG FRSH|P. L.|CS
-130|2679801|CHEESE, PROV LOAF REFRIG|VLAFO|LB
-131|4451791|SALMON, SMKD HNY ORIG|HNYSK|LB
-132|1930071|HERB, ROSEMARY 1LB|MFC|CS
-133|2708571|ARUGULA, WLD REFRIG FRSH|RSS|CS
-134|1817141|SYRUP, PIBB XTRA 5GAL BIB|PIBB|CS
-135|1662931|GLAZE, BALSAMIC VINGR PREM IMP|ROLND|CS
-136|2485561|[OBS] GLAZE, BALSAMIC VINGR ALL NATRL IMP|MODEN|CS
-137|4725721|SQUASH, ZUCCHINI MED 20-24LB|MFC|CS
-138|1926571|PASTA, GNOCCHI POTATO DUMPLING|EMILI|CS
-139|2987171|GARLIC, CLOVE PLD BAG REFRIG FRSH|RSS|CS
-140|3485551|CHEESE, GORGONZOLA CRMBL|CBLSO|CS
-141|1906471|BROCCOLI, FLORET BITE SZ|RSS|CS
-142|1596711|GIARDINIERA, HOT PEPR VEG BLND|VIENA|CS
-143|4906061|SALT, KOSHER|DMCRY|CS
-144|4856783|HONEY, ALFALFA WILDFLOWER|BEESQ|EA
-145|1021842|[JIT] TROUT, FLT RAINBOW 7-9Z BNLS SK ON|22PRM|LB
-146|4897961|SODA, ITAL ORNG BLOOD ARANCIATA ROSSA|SANPE|CS
-147|3543571|PASTA, NOODLE PAPPARDELLE DRY 18MM WIDE|PAPAR|CS
-148|1066331|HERB, BASIL|P. L.|CS
-149|2729871|LID, PAN FOIL STEAM HALF SIZE|PRPKO|CS
-150|3332781|MEATBALL, ITAL 2Z CKD FZN|FONTN|CS
-151|3334721|CARROT, JUMBO 50LB BAG|P. L.|CS
-152|3131341|OIL, OLIVE XVRGN 100% CA BIB|CORTO|CS
-153|3431991|PAD, SCOUR 9X6" HVY DTY GRN|PRPKO|CS
-154|4912561|[JIT] SALMON, ATL CHILEAN FLT SK ON PBO|22SIG|LB
-155|2967851|FILM, PVC 18"X2000' CLR RL W-CUTTER BOX|PRPKO|CS
-156|2473531|BAG, PASTRY 21" DISPOSABLE|REGNC|CS
-157|1918241|COOKIE, LADY FINGERS BAG SHLF STABLE BOU|ROLND|CS
-158|4551361|SUGAR, GRAN FINE BEET|WHTSA|CS
-159|4669581|LID, PLS 8Z 16Z 32Z DELI RND CLR PP|PRPKO|CS
-160|4667221|CELERY, JMBO REFRIG FRSH|MFC|CS
-161|4783501|MILK, 2% RF 1GAL|SHAMF|CS
-162|2666351|SOUP, ITAL WEDDING RTU|CFRAN|CS
-163|1950391|TWINE, BUTCHER 24PLY|REGNC|CS
-164|4612411|SPICE, OREGANO LEAF WHL BULK|KATYS|CS
-165|1501521|JUICE, CRANBRY COCKTL 27%|TROPC|CS
-166|3923081|PORK, GRND FINE 80/20 FZN|PRCRO|CS
-167|1915531|ASPARAGUS, WHL STND REFRIG FRSH|MFC|CS
-168|1941231|PEPPER, RED WHL FIRE RSTD IMP|ROLND|CS
-169|0801081|CANNOLI, CREAM CHOC CHIP|LAROS|CS
-170|4897981|SODA, ITAL ORNG ARANCIATA 330ML CAN|SANPE|CS
-171|4608701|SPICE, GRLC GRANULE 24Z SHKR|KATYO|CS
-172|2536171|LABEL, USE FIRST 2" TRILINGUAL|NATCH|CS
-173|2664131|NUT, WALNUT HALF & PCE|KATYO|CS
-174|2566861|MAYONNAISE, DLX HVY DTY|KATYD|CS
-175|4671921|SALAMI, TOSCANO CHUB DRY CURED CKD REFRI|PMCTO|LB
-176|4119911|WATER, SPARKLING MINERAL FLAT CAP 1LTR G|SANPE|CS
-177|3449071|LEMON, CHO 200CT BOX REFRIG FRSH|ESS|CS
-178|4897971|SODA, ITAL LMN LIMONATA 330ML CAN|SANPE|CS
-179|4002173|SPREAD, SOUR CHERRY|DIVNA|EA
-180|8545053|FILTER, FRYER CONE 10IN|ROYPP|EA
-181|2730783|VINEGAR, WINE WHT|REGNA|EA
-182|2843021|RAVIOLI, FOUR CHSE IN EGG|JOSEP|CS
-183|3078661|SOUP BASE, VEG LIQ CONC|KNORR|CS
-184|3428481|RAVIOLI, PUMPKIN MASCARPONE|JOSEP|CS
-185|2836121|HERB, SAGE|MFC|CS
-186|1805001|SYRUP, STRAWBRY|MONIN|CS
-187|4995201|JUICE, APPLE REJUV 100% 7.2Z CAN RTD|REJUO|CS
-188|5050021|SPICE, PEPR RED CRSH SSRV PKT|VLAFO|CS
-189|4900113|YEAST, SAF-INSTANT RED|LESAF|EA
-190|7303583|SYRUP, FLAVORING CHOC JUG 7.5LB|HERSY|EA
-191|1666153|OIL, TRUFFLE WHITE|BARTO|EA
-192|1915391|MUSTARD, DIJON PLS JAR|GPUPN|CS
-193|1862073|APRON, POLY 28X46 HVY WHT|FDHND|EA
-194|4124461|ORANGE, CHOICE 113CT|ESS|CS
-195|4664511|CONTAINER, 12Z SQUAT FLEX COMBO PK WHT|DART|CS
-196|3158851|BEEF, CHK FLAP CHO ANGUS REFRIG|GCPRM|LB
-197|3499621|SAUCE, ALFREDO|VLAFO|CS
-198|3487341|BAG, STORAGE GAL RECLOSABLE|PRPKO|CS
-199|1833111|FILTER, COF&TEA 12 CUP PAPR 9.5X4.25|BUNN|CS
-200|4959791|SHRIMP, RAW WHT 16-20CT P&D T-OFF|PPORO|CS
-201|4338331|CHEESE, FETA BULGARIA IMP|ATALA|CS
-202|4602171|EGG, LIQ SCRAMBLE CAGE FREE P12CE|ABBOT|CS
-203|4831601|FLOUR, PIZZA GLUTEN MALTED 50LB|VLAFO|CS
-204|3744041|PEPPER, BELL CHOPR RED 1 1/9BU|ESS|CS
-205|3375241|BEET, RED BOXED|P. L.|CS
-206|4508641|TOMATO, PASTE 26% GRD A CAN|BHVSD|CS
-207|1804981|SYRUP, RASPBRY|MONIN|CS
-208|1001646|CHEESE, MASCARPONE RBST FREE USA|VLAFO|CS
-209|7704201|NUTS, WALNUT HLVS PCS|MRIAN|CS
-210|4451471|ONION, YLW WHL JMBO 50LB REFRIG FRSH #2|ESS|CS
-211|1668291|TOMATO, PASTE CONC CAN SHLF STABLE|HUNT|CS
-212|4695371|CARTON, PAPER FOOD #2 KRAFT|PRPKO|CS
-213|2510551|[SO] BAG, PLS 12X7X22 WHT T-SHIRT|COMND|CS
-214|4615671|OIL, OLV XVRGN BIB IMP|TRIFS|CS`;
-
 // --- ERROR BOUNDARY ---
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -714,12 +495,19 @@ const App = () => {
         if(!GOOGLE_SCRIPT_URL) { alert("Config Error"); return; }
         setIsLoading(true);
         try {
+            // Switch to Form Submission to bypass CORS/Preflight issues
+            const formData = new URLSearchParams();
+            formData.append("payload", JSON.stringify(matches));
+
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
-                // REMOVED CONTENT-TYPE HEADER TO FIX GOOGLE SCRIPT ISSUE
-                body: JSON.stringify(matches)
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
             });
+
             alert("Saved to Cloud!");
             setLastCloudSave(new Date());
         } catch(err) {
@@ -799,7 +587,7 @@ const App = () => {
                 <div className="w-1/3 border-r bg-white flex flex-col">
                     <div className="p-3 border-b bg-green-50 border-green-100">
                         <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-bold text-green-800 text-sm"><i className="fas fa-list mr-1"></i> Shamrock Foods (Source)</h3>
+                            <h3 className="font-bold text-green-800 text-sm"><i className="fas fa-list mr-1"></i> Shamrock (Source List)</h3>
                         </div>
                         <div className="flex justify-around text-xs font-bold text-slate-500 bg-white rounded p-1 border">
                             {['all','unmatched','matched'].map(m => (
@@ -824,7 +612,7 @@ const App = () => {
                     {selectedItem ? (
                         <>
                             <div className="p-4 bg-white border-b shadow-sm">
-                                <div className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">1. Buying: Shamrock Foods</div>
+                                <div className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Step 1: Selected Shamrock Item</div>
                                 <h2 className="text-lg font-bold text-slate-900 leading-snug">{selectedItem.desc}</h2>
                                 <div className="flex gap-2 mt-2 text-xs text-slate-500">
                                     <span className="bg-slate-100 px-2 py-1 rounded border">{selectedItem.brand}</span>
@@ -850,7 +638,7 @@ const App = () => {
                                 </div>
                             )}
                             <div className="p-2 bg-slate-100 border-b">
-                                <div className="text-xs font-bold text-blue-500 uppercase px-2 mb-1 mt-1">2. Match against: US Foods</div>
+                                <div className="text-xs font-bold text-blue-500 uppercase px-2 mb-1 mt-1">Step 2: Select US Foods Match</div>
                                 <input type="text" className="w-full p-2 border rounded shadow-sm focus:ring-2 ring-blue-200 outline-none" placeholder="Type to search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
                             <div className="scroll-area p-2">
@@ -860,7 +648,7 @@ const App = () => {
                                         <div className="font-medium text-slate-800">{uItem.desc}</div>
                                         <div className="flex justify-between mt-2 text-xs text-slate-500">
                                             <span>{uItem.brand}</span>
-                                            <span className="font-bold text-slate-700">{uItem.price}</span>
+                                            <span className="font-bold text-slate-700">{uItem.price} <span className="ml-2 text-[10px] bg-slate-200 px-1 rounded">US Foods</span></span>
                                         </div>
                                     </div>
                                 ))}
@@ -887,10 +675,11 @@ const App = () => {
                             const uItem = usFoodsItems.find(u => u.id === matches[sItem.id]);
                             if (!uItem) return null;
                             return (
-                                <div key={sItem.id} className="p-3 border-b group hover:bg-red-50 transition-colors relative">
-                                    <div className="grid grid-cols-2 gap-4 items-center text-xs">
-                                        <div className="text-slate-700 truncate" title={sItem.desc}>{sItem.desc}</div>
-                                        <div className="text-blue-700 truncate" title={uItem.desc}>{uItem.desc}</div>
+                                <div key={sItem.id} className="p-3 border-b group hover:bg-red-50 transition-colors relative text-xs">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex-1 text-slate-700">{sItem.desc}</div>
+                                        <div className="text-slate-300 mt-1"><i className="fas fa-arrow-right"></i></div>
+                                        <div className="flex-1 text-blue-700 font-medium">{uItem.desc}</div>
                                     </div>
                                     <button onClick={(e) => { e.stopPropagation(); handleUnmatch(sItem.id); }} className="absolute top-1 right-1 text-red-300 hover:text-red-600 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <i className="fas fa-times"></i>
